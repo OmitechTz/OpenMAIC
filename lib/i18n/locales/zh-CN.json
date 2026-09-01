@@ -10,7 +10,7 @@
     "close": "关闭"
   },
   "home": {
-    "slogan": "Generative Learning in Multi-Agent Interactive Classroom",
+    "slogan": "为每一间中小学与大学课堂打造互动课程",
     "greetingWithName": "嗨，{{name}}"
   },
   "toolbar": {

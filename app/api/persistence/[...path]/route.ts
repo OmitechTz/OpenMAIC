@@ -23,6 +23,7 @@ import {
 import { readStageMeta } from '@/lib/persistence/stage-meta';
 import { APP_RUNTIME_PAYLOAD_VALIDATORS } from '@/lib/runtime/payload-validators';
 import { withRequestOwnerId } from '@/lib/server/agent-runtime/with-owner';
+import { isOmitechIntegrationEnabled } from '@/lib/omitech/session';
 
 export const runtime = 'nodejs';
 
@@ -272,11 +273,11 @@ export async function handlePersistenceRequest(
   if (!connectionString) {
     return jsonError(404, 'PERSISTENCE_NOT_CONFIGURED', 'server persistence not configured');
   }
-  if (!process.env.PERSISTENCE_DEV_TOKEN) {
+  if (!isOmitechIntegrationEnabled() && !process.env.PERSISTENCE_DEV_TOKEN) {
     return jsonError(
       503,
       'PERSISTENCE_DEV_TOKEN_MISSING',
-      'server persistence requires PERSISTENCE_DEV_TOKEN (development auth only)',
+      'server persistence requires PERSISTENCE_DEV_TOKEN outside Omitech integration mode',
     );
   }
 

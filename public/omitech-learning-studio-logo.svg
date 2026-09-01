@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 72" fill="none">
+  <title>Omitech Learning Studio</title>
+  <g transform="translate(4 4)">
+    <path d="M47.6 47.6A22 22 0 1 1 47.6 16.4" stroke="#23211F" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="32" cy="32" r="6.5" fill="#D6336C"/>
+    <path d="M40 28.5H47V24L61 32 47 40V35.5H40Z" fill="#D6336C"/>
+  </g>
+  <text x="82" y="34" fill="#23211F" font-family="Inter, Arial, sans-serif" font-size="29" font-weight="700" letter-spacing="-0.8">Omitech</text>
+  <text x="82" y="58" fill="#D6336C" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="600" letter-spacing="-0.2">Learning Studio</text>
+</svg>

@@ -10,6 +10,7 @@ const ENV_PREFIXES_TO_CLEAR = [
   'AZURE_OPENAI',
   'ATLASCLOUD',
   'ANTHROPIC',
+  'GEMINI',
   'GOOGLE',
   'DEEPSEEK',
   'QWEN',
@@ -75,6 +76,7 @@ function clearProviderEnv() {
   delete process.env.BEDROCK_REGION;
   delete process.env.AWS_BEARER_TOKEN_BEDROCK;
   delete process.env.TTS_QWEN_VOICE_CLONE_MODEL;
+  delete process.env.OLLAMA_HOST;
 }
 
 vi.mock('fs', async (importOriginal) => {
@@ -146,6 +148,12 @@ describe('provider-config', () => {
       expect(resolveApiKey('azure')).toBe('azure-key');
     });
 
+    it('accepts the Omitech Gemini credential name for Google models', async () => {
+      vi.stubEnv('GEMINI_API_KEY', 'gemini-server-key');
+      const { resolveApiKey } = await import('@/lib/server/provider-config');
+      expect(resolveApiKey('google')).toBe('gemini-server-key');
+    });
+
     it('returns empty string for unknown provider with no env var', async () => {
       const { resolveApiKey } = await import('@/lib/server/provider-config');
       expect(resolveApiKey('nonexistent-provider')).toBe('');
@@ -210,6 +218,18 @@ describe('provider-config', () => {
     it('returns undefined when neither client nor server URL exists', async () => {
       const { resolveBaseUrl } = await import('@/lib/server/provider-config');
       expect(resolveBaseUrl('openai')).toBeUndefined();
+    });
+
+    it('maps the Omitech Ollama host to its OpenAI-compatible endpoint', async () => {
+      vi.stubEnv('OLLAMA_HOST', 'http://127.0.0.1:11434');
+      const { resolveBaseUrl } = await import('@/lib/server/provider-config');
+      expect(resolveBaseUrl('ollama')).toBe('http://127.0.0.1:11434/v1');
+    });
+
+    it('does not duplicate an Ollama v1 suffix', async () => {
+      vi.stubEnv('OLLAMA_HOST', 'http://127.0.0.1:11434/v1/');
+      const { resolveBaseUrl } = await import('@/lib/server/provider-config');
+      expect(resolveBaseUrl('ollama')).toBe('http://127.0.0.1:11434/v1');
     });
   });
 

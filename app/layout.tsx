@@ -12,6 +12,7 @@ import { ServerProvidersInit } from '@/components/server-providers-init';
 import { StorageHealthNotice } from '@/components/storage-health-notice';
 import { AccessCodeGuard } from '@/components/access-code-guard';
 import { ProSwapWatcher } from '@/components/workbench/ProSwapWatcher';
+import { OmitechSessionBridge } from '@/components/omitech-session-bridge';
 
 // The UI font is loaded from @fontsource's stylesheet rather than next/font,
 // because only the stylesheet carries the per-subset `unicode-range`
@@ -29,9 +30,9 @@ import { ProSwapWatcher } from '@/components/workbench/ProSwapWatcher';
 import '@fontsource-variable/inter';
 
 export const metadata: Metadata = {
-  title: 'OpenMAIC',
+  title: 'Omitech Learning Studio',
   description:
-    'The open-source AI interactive classroom. Upload a PDF to instantly generate an immersive, multi-agent learning experience.',
+    'Help school and university teachers build interactive lessons, lectures, activities, simulations, and assessments from their course material.',
 };
 
 export default function RootLayout({
@@ -47,9 +48,11 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <I18nProvider>
-            <ServerProvidersInit />
-            <ProSwapWatcher />
-            <AccessCodeGuard>{children}</AccessCodeGuard>
+            <OmitechSessionBridge>
+              <ServerProvidersInit />
+              <ProSwapWatcher />
+              <AccessCodeGuard>{children}</AccessCodeGuard>
+            </OmitechSessionBridge>
             <Toaster position="top-center" />
             {/* After the Toaster: this one raises a toast on mount when
                 persistence is already broken, and a toast raised before its

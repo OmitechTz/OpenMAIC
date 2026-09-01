@@ -3,9 +3,9 @@
  *
  * The reference (live deployment) resolves the brand per vendor from the
  * desktop shell's User-Agent token. This workspace has no vendor shell: the
- * product ships with its own single brand, so the config is static and the
- * desktop flag is always off. The shape is kept so surfaces that read the
- * brand (home hero, workspace rail, site header) keep one source of truth.
+ * Omitech Agent ships this fork as its integrated Learning Studio, so the
+ * config is static and the desktop flag is always off. The shape is kept so
+ * surfaces that read the brand share one source of truth.
  */
 
 export interface BrandConfig {
@@ -23,12 +23,12 @@ export interface BrandConfig {
   themeColor: string;
 }
 
-/** The default brand: the product itself, with no vendor overrides. */
+/** Omitech Agent's integrated Learning Studio brand. */
 export const DEFAULT_BRAND: BrandConfig = {
-  productName: 'OpenMAIC',
-  shortName: 'OpenMAIC',
-  logoSrc: '/logo-horizontal.png',
+  productName: 'Omitech Learning Studio',
+  shortName: 'Learning Studio',
+  logoSrc: '/omitech-learning-studio-logo.svg',
   logoHasWordmark: true,
-  markSrc: '/openmaic-mark.png',
-  themeColor: '#722ed1',
+  markSrc: '/omitech-agent-mark.svg',
+  themeColor: '#d6336c',
 };

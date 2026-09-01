@@ -139,8 +139,61 @@ async function listBuiltinSkills(): Promise<LoadedSkill[]> {
   if (builtinCache) return builtinCache;
   if (!existsSync(skillsDir)) return (builtinCache = []);
 
-  const env = new NodeExecutionEnv({ cwd: skillsDir });
-  const { skills, diagnostics } = await loadSkills(env, skillsDir);
+  // pi-agent-core's skill walker compares POSIX-shaped paths. Node's Windows
+  // execution environment returns backslashes from readdir/realpath, which
+  // makes the ignore matcher mistake every child for an absolute path. Keep
+  // filesystem I/O in the upstream environment but normalize paths at its
+  // result boundary until the upstream walker is platform-aware.
+  const portableSkillsDir = skillsDir.replace(/\\/g, '/');
+  const nodeEnv = new NodeExecutionEnv({ cwd: portableSkillsDir });
+  const env = new Proxy(nodeEnv, {
+    get(target, property, receiver) {
+      if (property === 'fileInfo') {
+        return async (path: string) => {
+          const result = await target.fileInfo(path);
+          if (!result.ok) return result;
+          const portablePath = result.value.path.replace(/\\/g, '/');
+          return {
+            ...result,
+            value: {
+              ...result.value,
+              name: portablePath.replace(/\/$/, '').split('/').at(-1) ?? result.value.name,
+              path: portablePath,
+            },
+          };
+        };
+      }
+      if (property === 'listDir') {
+        return async (path: string, signal?: AbortSignal) => {
+          const result = await target.listDir(path, signal);
+          return result.ok
+            ? {
+                ...result,
+                value: result.value.map((entry) => {
+                  const portablePath = entry.path.replace(/\\/g, '/');
+                  return {
+                    ...entry,
+                    name: portablePath.replace(/\/$/, '').split('/').at(-1) ?? entry.name,
+                    path: portablePath,
+                  };
+                }),
+              }
+            : result;
+        };
+      }
+      if (property === 'canonicalPath') {
+        return async (path: string) => {
+          const result = await target.canonicalPath(path);
+          return result.ok
+            ? { ...result, value: result.value.replace(/\\/g, '/') }
+            : result;
+        };
+      }
+      const value = Reflect.get(target, property, receiver);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+  const { skills, diagnostics } = await loadSkills(env, portableSkillsDir);
   for (const d of diagnostics) {
     log.warn(`${d.code}: ${d.message} (${d.path})`);
   }

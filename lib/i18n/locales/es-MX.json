@@ -10,7 +10,7 @@
     "close": "Cerrar"
   },
   "home": {
-    "slogan": "Aprendizaje generativo en un aula interactiva multiagente",
+    "slogan": "Crea lecciones interactivas para aulas escolares y universitarias",
     "greetingWithName": "Hola, {{name}}"
   },
   "toolbar": {

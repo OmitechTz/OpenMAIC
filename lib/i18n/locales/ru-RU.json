@@ -10,7 +10,7 @@
     "close": "Закрыть"
   },
   "home": {
-    "slogan": "Generative Learning in Multi-Agent Interactive Classroom",
+    "slogan": "Создавайте интерактивные занятия для школ и университетов",
     "greetingWithName": "Привет, {{name}}"
   },
   "toolbar": {

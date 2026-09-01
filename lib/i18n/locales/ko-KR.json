@@ -10,7 +10,7 @@
     "close": "닫기"
   },
   "home": {
-    "slogan": "멀티 에이전트 인터랙티브 교실에서 펼치는 생성형 학습",
+    "slogan": "모든 학교와 대학 교실을 위한 참여형 수업 만들기",
     "greetingWithName": "안녕하세요, {{name}}!"
   },
   "toolbar": {

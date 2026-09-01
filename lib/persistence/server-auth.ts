@@ -16,6 +16,7 @@ import type { IncomingMessage } from 'node:http';
 
 import type { AssetPrincipal } from '@openmaic/storage';
 import type { RuntimeHttpPrincipal } from '@openmaic/storage/server';
+import { isOmitechIntegrationEnabled, readOmitechIdentity } from '@/lib/omitech/session';
 
 type PersistencePrincipal = RuntimeHttpPrincipal & Partial<Pick<AssetPrincipal, 'key'>>;
 
@@ -54,6 +55,10 @@ function authenticatePersistenceCredentials(
 }
 
 export function authenticatePersistenceHeaders(headers: Headers): PersistencePrincipal | undefined {
+  if (isOmitechIntegrationEnabled()) {
+    const identity = readOmitechIdentity(headers);
+    return identity ? { key: identity.ownerId, learnerKey: identity.ownerId } : undefined;
+  }
   return authenticatePersistenceCredentials(
     headers.get('authorization') ?? undefined,
     headers.get('x-learner-key') ?? undefined,
@@ -63,6 +68,13 @@ export function authenticatePersistenceHeaders(headers: Headers): PersistencePri
 export async function authenticatePersistenceRequest(
   req: IncomingMessage,
 ): Promise<PersistencePrincipal | undefined> {
+  if (isOmitechIntegrationEnabled()) {
+    const headers = new Headers();
+    const cookie = singleHeader(req.headers.cookie);
+    if (cookie) headers.set('cookie', cookie);
+    const identity = readOmitechIdentity(headers);
+    return identity ? { key: identity.ownerId, learnerKey: identity.ownerId } : undefined;
+  }
   return authenticatePersistenceCredentials(
     singleHeader(req.headers.authorization),
     singleHeader(req.headers['x-learner-key']),

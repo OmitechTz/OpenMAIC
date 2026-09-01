@@ -257,9 +257,14 @@ describe('shipped skill constraints', () => {
     expect(loaded.length).toBeGreaterThan(0);
     for (const skill of loaded) {
       expect(skill.title?.trim(), `${skill.id} needs a title: in its frontmatter`).toBeTruthy();
-      // The shipped skills' display names are Chinese; assert the title is not
-      // just an English restatement of the id.
-      expect(skill.title, skill.id).toMatch(/[一-鿿]/);
+      // Upstream classroom skills retain their Chinese display names. The
+      // Omitech product skills are intentionally English for the host app, but
+      // still carry the Omitech product identity instead of exposing a bare id.
+      if (skill.id.startsWith('omitech-')) {
+        expect(skill.title, skill.id).toMatch(/^Omitech\b/);
+      } else {
+        expect(skill.title, skill.id).toMatch(/[一-鿿]/);
+      }
     }
   });
 

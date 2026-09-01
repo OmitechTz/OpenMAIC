@@ -10,7 +10,7 @@
     "close": "Fermer"
   },
   "home": {
-    "slogan": "L’apprentissage génératif en classe interactive multi-agents",
+    "slogan": "Créez des cours interactifs pour les écoles et les universités",
     "greetingWithName": "Bonjour, {{name}}"
   },
   "toolbar": {
