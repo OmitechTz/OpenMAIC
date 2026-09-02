@@ -1,4 +1,5 @@
 import { resolveRequestOwnerId } from './owner';
+import { isOmitechIntegrationEnabled, readOmitechIdentity } from '@/lib/omitech/session';
 
 /**
  * Resolve the anonymous owner identity and run a handler with its response
@@ -14,7 +15,15 @@ export async function withRequestOwnerId(
   handler: (ownerId: string, responseHeaders: Headers) => Promise<Response>,
 ): Promise<Response> {
   const responseHeaders = new Headers();
-  const ownerId = resolveRequestOwnerId(req, responseHeaders);
+  const integrated = isOmitechIntegrationEnabled();
+  const identity = integrated ? readOmitechIdentity(req.headers) : undefined;
+  if (integrated && !identity) {
+    return Response.json(
+      { error: { code: 'OMITECH_SESSION_REQUIRED', message: 'Open from Omitech Agent to continue.' } },
+      { status: 401 },
+    );
+  }
+  const ownerId = resolveRequestOwnerId(req, responseHeaders, identity?.ownerId);
   try {
     return await handler(ownerId, responseHeaders);
   } catch (error) {

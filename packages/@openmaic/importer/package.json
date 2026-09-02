@@ -21,7 +21,8 @@
   ],
   "scripts": {
     "clean:dist": "rimraf dist",
-    "build": "rm -rf dist && rollup -c && tsc --emitDeclarationOnly",
+    "clean": "node ../../../scripts/clean-dist.mjs",
+    "build": "pnpm run clean && rollup -c && tsc --emitDeclarationOnly",
     "dev": "rollup -c -w",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
     "test": "vitest run",
@@ -79,8 +80,5 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.8"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": []
   }
 }

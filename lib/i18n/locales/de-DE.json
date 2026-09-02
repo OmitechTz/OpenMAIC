@@ -10,7 +10,7 @@
     "close": "Schließen"
   },
   "home": {
-    "slogan": "Generatives Lernen im interaktiven Lernraum mit mehreren KI-Agenten",
+    "slogan": "Interaktive Unterrichtseinheiten für Schulen und Hochschulen erstellen",
     "greetingWithName": "Hallo, {{name}}"
   },
   "toolbar": {

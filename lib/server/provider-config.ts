@@ -65,6 +65,9 @@ export const LLM_ENV_MAP: Record<string, string> = {
   AZURE_OPENAI: 'azure',
   ATLASCLOUD: 'atlascloud',
   ANTHROPIC: 'anthropic',
+  // Omitech Agent names Google's Gemini credential GEMINI_API_KEY. Keep that
+  // deployment-level key usable here without copying it to a second secret.
+  GEMINI: 'google',
   GOOGLE: 'google',
   DEEPSEEK: 'deepseek',
   QWEN: 'qwen',
@@ -233,6 +236,12 @@ function normalizeModelList(models: string[] | undefined): string[] | undefined 
   return parsed && parsed.length > 0 ? parsed : undefined;
 }
 
+function openAICompatibleOllamaUrl(host: string | undefined): string | undefined {
+  const normalized = host?.trim().replace(/\/+$/, '');
+  if (!normalized) return undefined;
+  return /\/v1$/i.test(normalized) ? normalized : `${normalized}/v1`;
+}
+
 function loadEnvSection(
   envMap: Record<string, string>,
   yamlSection: Record<string, Partial<ServerProviderEntry>> | undefined,
@@ -271,7 +280,9 @@ function loadEnvSection(
   // Then, apply env vars (env takes priority over YAML)
   for (const [prefix, providerId] of Object.entries(envMap)) {
     const envApiKey = process.env[`${prefix}_API_KEY`] || undefined;
-    const envBaseUrl = process.env[`${prefix}_BASE_URL`] || undefined;
+    const omitechOllamaHost =
+      prefix === 'OLLAMA' ? openAICompatibleOllamaUrl(process.env.OLLAMA_HOST) : undefined;
+    const envBaseUrl = process.env[`${prefix}_BASE_URL`] || omitechOllamaHost || undefined;
     const envModelsStr = process.env[`${prefix}_MODELS`];
     const envModels = envModelsStr
       ? envModelsStr

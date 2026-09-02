@@ -12,6 +12,21 @@ import { getLearnerKey } from '@/lib/runtime/learner-key';
 let deviceKv: BrowserKVStore | undefined;
 let learnerKeyPromise: Promise<string> | undefined;
 
+function isOmitechIdentityEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_OMITECH_INTEGRATION === '1';
+}
+
+async function getOmitechLearnerKey(): Promise<string> {
+  const response = await fetch('/api/omitech/session', { credentials: 'same-origin' });
+  const payload = (await response.json().catch(() => ({}))) as {
+    authenticated?: boolean;
+    user?: { learner_key?: string };
+  };
+  const learnerKey = payload.authenticated ? payload.user?.learner_key : undefined;
+  if (!response.ok || !learnerKey) throw new Error('Omitech Learning Studio session is unavailable');
+  return learnerKey;
+}
+
 export function isBrowserPersistenceEnabled(): boolean {
   return typeof window !== 'undefined' && process.env.NEXT_PUBLIC_PERSISTENCE === '1';
 }
@@ -20,7 +35,11 @@ export function getPersistenceLearnerKey(): Promise<string> {
   if (!isBrowserPersistenceEnabled()) {
     return Promise.reject(new Error('Browser persistence is not enabled'));
   }
-  return (learnerKeyPromise ??= getLearnerKey((deviceKv ??= new BrowserKVStore())).catch(
+  return (learnerKeyPromise ??= (
+    isOmitechIdentityEnabled()
+      ? getOmitechLearnerKey()
+      : getLearnerKey((deviceKv ??= new BrowserKVStore()))
+  ).catch(
     (error) => {
       learnerKeyPromise = undefined;
       throw error;
@@ -31,7 +50,9 @@ export function getPersistenceLearnerKey(): Promise<string> {
 export async function getPersistenceRequestHeaders(): Promise<Record<string, string>> {
   if (!isBrowserPersistenceEnabled()) return {};
   const resolvedLearnerKey = await getPersistenceLearnerKey();
-  const token = process.env.NEXT_PUBLIC_PERSISTENCE_TOKEN;
+  const token = isOmitechIdentityEnabled()
+    ? undefined
+    : process.env.NEXT_PUBLIC_PERSISTENCE_TOKEN;
   return {
     'x-learner-key': resolvedLearnerKey,
     ...(token ? { authorization: `Bearer ${token}` } : {}),

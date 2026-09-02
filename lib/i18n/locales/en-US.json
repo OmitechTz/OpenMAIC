@@ -10,8 +10,15 @@
     "close": "Close"
   },
   "home": {
-    "slogan": "Generative Learning in Multi-Agent Interactive Classroom",
-    "greetingWithName": "Hi, {{name}}"
+    "slogan": "Create engaging lessons for every school and university classroom",
+    "greetingWithName": "Hi, {{name}}",
+    "starterWorkflowsLabel": "Omitech Learning Studio starter workflows",
+    "starterWorkflows": {
+      "lesson": "Plan a lesson",
+      "lecture": "Build a lecture",
+      "assessment": "Create an assessment",
+      "activity": "Design an activity"
+    }
   },
   "toolbar": {
     "pdfParser": "Parser",
@@ -28,9 +35,9 @@
     "webSearchProvider": "Search engine",
     "webSearchNoProvider": "Configure search API key in Settings",
     "selectProvider": "Select provider",
-    "configureProvider": "Set up model",
-    "configureProviderHint": "Configure at least one model provider to generate courses",
-    "enterClassroom": "Enter Classroom",
+    "configureProvider": "Set up AI",
+    "configureProviderHint": "Open Settings to connect the Learning Studio AI service",
+    "enterClassroom": "Create Learning Experience",
     "advancedSettings": "Advanced Settings",
     "thinking": "Thinking",
     "thinkingBudget": "Budget",
@@ -197,7 +204,7 @@
     }
   },
   "agentBar": {
-    "readyToLearn": "Ready to learn together?",
+    "readyToLearn": "Ready to build a learning experience?",
     "expandedTitle": "Classroom Role Config",
     "configTooltip": "Click to configure classroom roles",
     "voiceLabel": "Voice",
@@ -961,7 +968,7 @@
     "notReady": "Available after generation completes"
   },
   "classroom": {
-    "recentClassrooms": "Recent",
+    "recentClassrooms": "Recent learning experiences",
     "today": "Today",
     "yesterday": "Yesterday",
     "daysAgo": "days ago",
@@ -1014,7 +1021,7 @@
     "pdfSizeLimit": "Supports PDF files up to 50MB",
     "courseMaterialSizeLimit": "Documents, slides, spreadsheets, images, and plain text — up to 50MB (accepted formats depend on the selected extractor)",
     "generateFailed": "Failed to generate classroom, please try again",
-    "requirementPlaceholder": "Tell me anything you want to learn, e.g.\n\"Teach me Python from scratch in 30 minutes\"\n\"Explain Fourier Transform on the whiteboard\"\n\"How to play the board game Avalon\"",
+    "requirementPlaceholder": "What would you like your students to learn? e.g.\n\"Teach photosynthesis to Grade 8 with an interactive activity\"\n\"Turn this university lecture PDF into a student-centered lesson\"\n\"Create a formative quiz for these learning objectives\"",
     "requirementRequired": "Please enter course requirements",
     "fileTooLarge": "File too large. Please select a file smaller than 50MB",
     "courseMaterialCountLimit": "You can upload up to 5 course material files",
@@ -1973,7 +1980,7 @@
   },
   "profile": {
     "title": "Profile",
-    "defaultNickname": "Learner",
+    "defaultNickname": "Teacher",
     "chooseAvatar": "Choose Avatar",
     "uploadAvatar": "Upload",
     "bioPlaceholder": "Tell us about yourself — the AI teacher will personalize lessons for you...",

@@ -10,7 +10,7 @@
     "close": "關閉"
   },
   "home": {
-    "slogan": "多智能體互動課室中的生成式學習",
+    "slogan": "為每一間中小學與大學課堂打造互動課程",
     "greetingWithName": "嗨，{{name}}"
   },
   "toolbar": {

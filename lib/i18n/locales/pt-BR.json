@@ -10,7 +10,7 @@
     "close": "Fechar"
   },
   "home": {
-    "slogan": "Aprendizagem Generativa em Sala de Aula Interativa Multi-Agente",
+    "slogan": "Crie aulas interativas para escolas e universidades",
     "greetingWithName": "Olá, {{name}}"
   },
   "toolbar": {

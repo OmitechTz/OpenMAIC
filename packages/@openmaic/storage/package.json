@@ -79,8 +79,8 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "clean": "rm -rf dist",
-    "build": "rm -rf dist && tsc -p tsconfig.json",
+    "clean": "node ../../../scripts/clean-dist.mjs",
+    "build": "pnpm run clean && tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run",
