@@ -198,6 +198,7 @@
     "vue-to-react": "^1.0.0"
   },
   "pnpm": {
+    "onlyBuiltDependencies": [],
     "ignoredBuiltDependencies": [
       "sharp",
       "unrs-resolver"

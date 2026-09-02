@@ -313,6 +313,7 @@ function IntegrationDialog({ id, onClose }: { id: EducationIntegrationId; onClos
       <div
         role="dialog"
         aria-modal="true"
+        aria-labelledby="integration-dialog-title"
         className="w-full max-w-lg rounded-3xl border border-border bg-background p-6 shadow-2xl"
       >
         <div className="flex items-start justify-between gap-4">
@@ -320,7 +321,9 @@ function IntegrationDialog({ id, onClose }: { id: EducationIntegrationId; onClos
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
               Integration setup
             </p>
-            <h2 className="mt-1 text-xl font-semibold">{definition.name}</h2>
+            <h2 id="integration-dialog-title" className="mt-1 text-xl font-semibold">
+              {definition.name}
+            </h2>
             <p className="mt-1 text-sm text-muted-foreground">{definition.description}</p>
           </div>
           <button
@@ -416,8 +419,8 @@ export function LearningStudioHub({
 
   const selectedCourse = courses.find((course) => course.id === selectedCourseId);
   const courseResources = resources.filter((resource) => resource.courseId === selectedCourseId);
-  const configuredIntegrations = Object.values(integrations).filter(
-    (integration) => integration.status !== 'not_configured',
+  const connectedIntegrations = Object.values(integrations).filter(
+    (integration) => integration.status === 'connected',
   ).length;
   const attachedFingerprints = useMemo(
     () => new Set(currentMaterials.map((material) => `${material.name}:${material.size}`)),
@@ -921,8 +924,8 @@ export function LearningStudioHub({
                       },
                       { label: 'Course resources', value: resources.length, icon: Library },
                       {
-                        label: 'Configured connections',
-                        value: configuredIntegrations,
+                        label: 'Verified connections',
+                        value: connectedIntegrations,
                         icon: Link2,
                       },
                     ].map((metric) => (
@@ -1067,12 +1070,12 @@ export function LearningStudioHub({
                                 'rounded-full px-2 py-1 text-[9px] font-semibold uppercase tracking-wide',
                                 state.status === 'connected'
                                   ? 'bg-emerald-50 text-emerald-700'
-                                  : state.status === 'configured'
+                                  : state.status === 'details_saved'
                                     ? 'bg-sky-50 text-sky-700'
                                     : 'bg-muted text-muted-foreground',
                               )}
                             >
-                              {state.status.replace('_', ' ')}
+                              {state.status.replaceAll('_', ' ')}
                             </span>
                           </div>
                           <p className="mt-3 text-sm font-semibold">{definition.name}</p>
@@ -1090,9 +1093,9 @@ export function LearningStudioHub({
                                 onClick={() => setIntegrationDialog(definition.id)}
                                 className="rounded-lg border border-border px-2.5 py-1.5 text-[10px] font-semibold hover:bg-muted"
                               >
-                                {state.status === 'configured' ? 'Edit' : 'Configure'}
+                                {state.status === 'details_saved' ? 'Edit' : 'Configure'}
                               </button>
-                              {state.status === 'configured' ? (
+                              {state.status === 'details_saved' ? (
                                 <button
                                   type="button"
                                   onClick={() => disconnectIntegration(definition.id)}

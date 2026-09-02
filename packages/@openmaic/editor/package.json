@@ -34,7 +34,8 @@
     "directory": "packages/@openmaic/editor"
   },
   "scripts": {
-    "build": "rm -rf dist && rollup -c && tsc --emitDeclarationOnly --declarationDir dist",
+    "clean": "node ../../../scripts/clean-dist.mjs",
+    "build": "pnpm run clean && rollup -c && tsc --emitDeclarationOnly --declarationDir dist",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "pnpm run build"

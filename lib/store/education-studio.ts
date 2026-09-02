@@ -12,6 +12,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import { createKVPersistStorage, purgeLegacyPersistKey } from '@/lib/store/kv-persist';
+import { deleteDocumentBlob } from '@/lib/utils/image-storage';
 
 export type StudioMode = 'teacher' | 'student';
 export type EducationLevel =
@@ -78,7 +79,7 @@ export interface InstitutionBranding {
 
 export interface EducationIntegration {
   id: EducationIntegrationId;
-  status: 'connected' | 'configured' | 'not_configured';
+  status: 'connected' | 'details_saved' | 'not_configured';
   endpoint: string;
   workspace: string;
   updatedAt?: number;
@@ -106,7 +107,7 @@ interface EducationStudioState {
   setMode: (mode: StudioMode) => void;
   createCourse: (input: CreateCourseInput) => string;
   updateCourse: (id: string, changes: Partial<Omit<EducationCourse, 'id' | 'createdAt'>>) => void;
-  removeCourse: (id: string) => void;
+  removeCourse: (id: string) => Promise<void>;
   selectCourse: (id: string | null) => void;
   addResource: (resource: Omit<CourseResource, 'id' | 'addedAt'>) => string;
   removeResource: (id: string) => void;
@@ -163,7 +164,7 @@ const recovery: { rehydrate?: () => void | Promise<void> } = {};
 
 export const useEducationStudioStore = create<EducationStudioState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       mode: 'teacher',
       courses: [],
       selectedCourseId: null,
@@ -197,7 +198,15 @@ export const useEducationStudioStore = create<EducationStudioState>()(
             course.id === id ? { ...course, ...changes, updatedAt: Date.now() } : course,
           ),
         })),
-      removeCourse: (id) =>
+      removeCourse: async (id) => {
+        const courseResources = get().resources.filter((resource) => resource.courseId === id);
+        const cleanup = await Promise.allSettled(
+          courseResources.map((resource) => deleteDocumentBlob(resource.storageKey)),
+        );
+        const failed = cleanup.filter((result) => result.status === 'rejected');
+        if (failed.length > 0) {
+          throw new Error(`Could not delete ${failed.length} locally stored course resource(s)`);
+        }
         set((state) => ({
           courses: state.courses.filter((course) => course.id !== id),
           resources: state.resources.filter((resource) => resource.courseId !== id),
@@ -205,7 +214,8 @@ export const useEducationStudioStore = create<EducationStudioState>()(
             state.selectedCourseId === id
               ? (state.courses.find((course) => course.id !== id)?.id ?? null)
               : state.selectedCourseId,
-        })),
+        }));
+      },
       selectCourse: (id) => set({ selectedCourseId: id }),
       addResource: (resource) => {
         const id = nanoid(10);
@@ -233,7 +243,7 @@ export const useEducationStudioStore = create<EducationStudioState>()(
             [id]: {
               ...state.integrations[id],
               ...changes,
-              status: id === 'omitech-agent' ? 'connected' : 'configured',
+              status: id === 'omitech-agent' ? 'connected' : 'details_saved',
               updatedAt: Date.now(),
             },
           },
@@ -255,7 +265,30 @@ export const useEducationStudioStore = create<EducationStudioState>()(
     }),
     {
       name: 'omitech-education-studio',
-      version: 1,
+      version: 2,
+      migrate: (persisted: unknown): EducationStudioState => {
+        const state = persisted as Omit<EducationStudioState, 'integrations'> & {
+          integrations?: Record<
+            EducationIntegrationId,
+            Omit<EducationIntegration, 'status'> & {
+              status: EducationIntegration['status'] | 'configured';
+            }
+          >;
+        };
+        if (!state.integrations) return state as EducationStudioState;
+        return {
+          ...state,
+          integrations: Object.fromEntries(
+            Object.entries(state.integrations).map(([id, integration]) => [
+              id,
+              {
+                ...integration,
+                status: integration.status === 'configured' ? 'details_saved' : integration.status,
+              },
+            ]),
+          ) as Record<EducationIntegrationId, EducationIntegration>,
+        };
+      },
       storage: createKVPersistStorage<EducationStudioState>('account', {
         onWriteRefused: () => recovery.rehydrate?.(),
       }),
