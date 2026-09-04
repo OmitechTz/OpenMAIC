@@ -11,6 +11,7 @@ import {
 } from '@/lib/omitech/session';
 
 const SECRET = 'test-omitech-sso-secret-at-least-32-characters';
+const SUBJECT = 'a'.repeat(64);
 
 function encode(value: object): string {
   return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
@@ -22,10 +23,8 @@ function launchToken(overrides: Record<string, unknown> = {}): string {
   const payload = encode({
     iss: 'omitech-agent',
     aud: 'omitech-learning-studio',
-    sub: '42',
+    sub: SUBJECT,
     type: 'openmaic_launch',
-    name: 'Omitech Owner',
-    role: 'admin',
     iat: now,
     exp: now + 90,
     jti: 'launch-jti',
@@ -51,10 +50,10 @@ describe('Omitech Learning Studio session', () => {
 
   it('verifies a narrow launch token and derives the server owner key', () => {
     expect(verifyOmitechLaunchToken(launchToken())).toMatchObject({
-      subject: '42',
-      ownerId: 'omitech:42',
-      name: 'Omitech Owner',
-      role: 'admin',
+      subject: SUBJECT,
+      ownerId: `omitech:${SUBJECT}`,
+      name: 'Learner',
+      role: 'learner',
     });
   });
 
@@ -72,10 +71,10 @@ describe('Omitech Learning Studio session', () => {
 
   it('reads the signed HTTP-only session identity without trusting client headers', () => {
     const identity: OmitechIdentity = {
-      subject: '42',
-      ownerId: 'omitech:42',
-      name: 'Omitech Owner',
-      role: 'admin',
+      subject: SUBJECT,
+      ownerId: `omitech:${SUBJECT}`,
+      name: 'Learner',
+      role: 'learner',
       expiresAt: Math.floor(Date.now() / 1000) + 90,
     };
     const { token } = createOmitechSessionToken(identity);
@@ -85,9 +84,9 @@ describe('Omitech Learning Studio session', () => {
     });
 
     expect(readOmitechIdentity(headers)).toMatchObject({
-      subject: '42',
-      ownerId: 'omitech:42',
-      name: 'Omitech Owner',
+      subject: SUBJECT,
+      ownerId: `omitech:${SUBJECT}`,
+      name: 'Learner',
     });
   });
 });

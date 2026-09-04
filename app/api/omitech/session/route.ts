@@ -57,6 +57,7 @@ export async function POST(request: Request) {
     enabled: true,
     authenticated: true,
     user: publicIdentity(identity),
+    expires_in: session.maxAge,
   });
   response.cookies.set(OMITECH_SESSION_COOKIE, session.token, {
     httpOnly: true,

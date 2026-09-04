@@ -16,6 +16,7 @@ interface SessionResponse {
   authenticated: boolean;
   user?: SessionUser;
   error?: string;
+  expires_in?: number;
 }
 
 function allowedParentOrigins(): Set<string> {
@@ -37,6 +38,12 @@ export function OmitechSessionBridge({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    const requestRefresh = () => {
+      for (const origin of allowedParentOrigins()) {
+        window.parent.postMessage({ type: 'omitech:learning-studio:session-refresh' }, origin);
+      }
+    };
     const connect = async (launchToken?: string) => {
       if (!cancelled) {
         setState('checking');
@@ -57,6 +64,16 @@ export function OmitechSessionBridge({ children }: { children: ReactNode }) {
       if (response.ok && payload.authenticated && payload.user) {
         setNickname(payload.user.name);
         setState('ready');
+        if (launchToken) {
+          if (refreshTimer) clearTimeout(refreshTimer);
+          refreshTimer = undefined;
+        }
+        if (launchToken && payload.expires_in) {
+          // Renew before the HTTP-only session expires. The parent issues a new
+          // short-lived launch token, so no reusable Omitech credential is kept here.
+          const refreshAfterMs = Math.max(60, payload.expires_in - 120) * 1000;
+          refreshTimer = setTimeout(requestRefresh, refreshAfterMs);
+        }
         return;
       }
       setMessage(payload.error || 'Open Learning Studio from your Omitech Agent workspace.');
@@ -92,6 +109,7 @@ export function OmitechSessionBridge({ children }: { children: ReactNode }) {
     });
     return () => {
       cancelled = true;
+      if (refreshTimer) clearTimeout(refreshTimer);
       window.removeEventListener('message', handleMessage);
     };
   }, [setNickname]);

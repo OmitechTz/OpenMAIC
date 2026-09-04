@@ -19,8 +19,6 @@ interface TokenClaims extends Record<string, unknown> {
   aud: string;
   sub: string;
   type: 'openmaic_launch' | 'omitech_session';
-  name: string;
-  role: string;
   iat: number;
   exp: number;
   jti: string;
@@ -98,10 +96,7 @@ function verifiedClaims(
     payload.aud !== AUDIENCE ||
     payload.type !== expectedType ||
     typeof payload.sub !== 'string' ||
-    !/^[1-9][0-9]{0,18}$/.test(payload.sub) ||
-    typeof payload.name !== 'string' ||
-    !payload.name.trim() ||
-    typeof payload.role !== 'string' ||
+    !/^[a-f0-9]{64}$/.test(payload.sub) ||
     typeof payload.iat !== 'number' ||
     typeof payload.exp !== 'number' ||
     typeof payload.jti !== 'string' ||
@@ -117,8 +112,8 @@ function identityFromClaims(claims: TokenClaims): OmitechIdentity {
   return {
     subject: claims.sub,
     ownerId: `omitech:${claims.sub}`,
-    name: claims.name.trim(),
-    role: claims.role,
+    name: 'Learner',
+    role: 'learner',
     expiresAt: claims.exp,
   };
 }
@@ -147,8 +142,6 @@ export function createOmitechSessionToken(identity: OmitechIdentity): {
     aud: AUDIENCE,
     sub: identity.subject,
     type: 'omitech_session',
-    name: identity.name,
-    role: identity.role,
     iat: now,
     exp: now + maxAge,
     jti: randomUUID(),

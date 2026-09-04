@@ -3,6 +3,8 @@
 # ---- Stage 1: Base ----
 FROM node:22-alpine AS base
 
+ENV NEXT_TELEMETRY_DISABLED=1
+
 ARG ALPINE_MIRROR=""
 ARG NPM_REGISTRY=""
 

@@ -55,11 +55,12 @@ describe('embedded persistence development authentication', () => {
   it('derives runtime and asset partitions from the signed Omitech session', async () => {
     vi.stubEnv('OMITECH_INTEGRATION_ENABLED', 'true');
     vi.stubEnv('OMITECH_SSO_SECRET', 'test-omitech-sso-secret-at-least-32-characters');
+    const subject = 'a'.repeat(64);
     const identity: OmitechIdentity = {
-      subject: '42',
-      ownerId: 'omitech:42',
-      name: 'Omitech Owner',
-      role: 'admin',
+      subject,
+      ownerId: `omitech:${subject}`,
+      name: 'Learner',
+      role: 'learner',
       expiresAt: Math.floor(Date.now() / 1000) + 60,
     };
     const { token } = createOmitechSessionToken(identity);
@@ -72,7 +73,7 @@ describe('embedded persistence development authentication', () => {
           authorization: 'Bearer wrong-development-token',
         }),
       ),
-    ).resolves.toEqual({ key: 'omitech:42', learnerKey: 'omitech:42' });
+    ).resolves.toEqual({ key: `omitech:${subject}`, learnerKey: `omitech:${subject}` });
   });
 
   it('does not fall back to development credentials in Omitech integration mode', async () => {
