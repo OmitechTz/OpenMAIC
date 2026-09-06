@@ -108,7 +108,9 @@ export function HeaderControls({
   // are text-only, but the latest review confirmed that this menu intentionally
   // stays unavailable until all media tasks have completed or failed.
   const canExport = isScriptExportReady({ scenes, generatingOutlines, failedOutlines }, mediaTasks);
-  const exportLabel = canExport ? t('export.pptx') : t('share.notReady');
+  const exportLabel = canExport
+    ? 'Download classroom'
+    : 'Downloads available after all scenes and media finish';
 
   const compact = variant === 'compact';
   const proChecked = proModeActive ?? mode === 'edit';
@@ -274,7 +276,7 @@ export function HeaderControls({
                 : exportLabel
             }
             className={cn(
-              'shrink-0 p-2 rounded-full transition-all',
+              'inline-flex items-center gap-2 shrink-0 p-2 rounded-full transition-all',
               canExport && !isExporting && !isExportingZip && !isExportingScript
                 ? 'text-gray-400 dark:text-gray-500 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200 hover:shadow-sm'
                 : 'text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-50',
@@ -290,9 +292,14 @@ export function HeaderControls({
             ) : (
               <Download className="w-4 h-4" />
             )}
+            <span className="text-xs">Download</span>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={8} className="min-w-[240px]">
+          <div className="max-w-[280px] border-b px-2 py-2 text-xs text-muted-foreground">
+            Slides, interactive resources and narration have different formats. Structured study
+            notes and assessments are downloaded from Saved resources on the Learning Studio home.
+          </div>
           <DropdownMenuItem
             disabled={!canExport}
             onSelect={exportPPTX}

@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { useUserProfileStore } from '@/lib/store/user-profile';
+import { activateLearningResources } from '@/lib/store/learning-resources';
 
 interface SessionUser {
   id: string;
@@ -58,10 +59,14 @@ export function OmitechSessionBridge({ children }: { children: ReactNode }) {
       const payload = (await response.json().catch(() => ({}))) as Partial<SessionResponse>;
       if (cancelled) return;
       if (payload.enabled === false) {
+        await activateLearningResources('standalone');
+        if (cancelled) return;
         setState('ready');
         return;
       }
       if (response.ok && payload.authenticated && payload.user) {
+        await activateLearningResources(payload.user.learner_key);
+        if (cancelled) return;
         setNickname(payload.user.name);
         setState('ready');
         if (launchToken) {
@@ -127,7 +132,9 @@ export function OmitechSessionBridge({ children }: { children: ReactNode }) {
         <p className="mt-5 text-sm text-muted-foreground">{message}</p>
         {state === 'blocked' ? (
           <a
-            href={process.env.NEXT_PUBLIC_OMITECH_AGENT_URL || 'http://127.0.0.1:1420/learning-studio'}
+            href={
+              process.env.NEXT_PUBLIC_OMITECH_AGENT_URL || 'http://127.0.0.1:1420/learning-studio'
+            }
             className="mt-6 inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
           >
             Return to Omitech Agent

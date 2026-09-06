@@ -82,6 +82,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useDraftCache } from '@/lib/hooks/use-draft-cache';
 import { SpeechButton } from '@/components/audio/speech-button';
 import { LearningStudioHub } from '@/components/education/learning-studio-hub';
+import { useEducationStudioStore } from '@/lib/store/education-studio';
 import { useImportClassroom } from '@/lib/import/use-import-classroom';
 import {
   isProWorkbenchEnabled,
@@ -129,6 +130,7 @@ const initialFormState: FormState = {
 };
 
 function HomePage() {
+  const studioMode = useEducationStudioStore((state) => state.mode);
   const { t } = useI18n();
   const brand = useBrand();
   const { theme, setTheme } = useTheme();
@@ -168,6 +170,8 @@ function HomePage() {
   }, [router, workbenchEntryEnabled]);
   const [form, setForm] = useState<FormState>(initialFormState);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsProviderId, setSettingsProviderId] =
+    useState<import('@/lib/types/provider').ProviderId>();
   const [settingsSection, setSettingsSection] = useState<
     import('@/lib/types/settings').SettingsSection | undefined
   >(undefined);
@@ -806,9 +810,13 @@ function HomePage() {
         open={settingsOpen}
         onOpenChange={(open) => {
           setSettingsOpen(open);
-          if (!open) setSettingsSection(undefined);
+          if (!open) {
+            setSettingsSection(undefined);
+            setSettingsProviderId(undefined);
+          }
         }}
         initialSection={settingsSection}
+        initialProviderId={settingsProviderId}
       />
 
       {/* ═══ Background Decor ═══ */}
@@ -862,7 +870,9 @@ function HomePage() {
           transition={{ delay: 0.25 }}
           className="text-sm text-muted-foreground/60 mb-8"
         >
-          {t('home.slogan')}
+          {studioMode === 'student'
+            ? 'Learn a topic, practise your skills and build your study resources'
+            : t('home.slogan')}
         </motion.p>
 
         {/* ── Unified input area ── */}
@@ -887,7 +897,11 @@ function HomePage() {
             {/* Textarea */}
             <textarea
               ref={textareaRef}
-              placeholder={t('upload.requirementPlaceholder')}
+              placeholder={
+                studioMode === 'student'
+                  ? 'What would you like to learn? For example: explain shipping in Tanzania, help me solve a problem, or prepare me for an exam.'
+                  : t('upload.requirementPlaceholder')
+              }
               className="w-full resize-none border-0 bg-transparent px-4 pt-1 pb-2 text-[13px] leading-relaxed placeholder:text-muted-foreground/40 focus:outline-none min-h-[140px] max-h-[300px]"
               value={form.requirement}
               onChange={(e) => updateForm('requirement', e.target.value)}
@@ -901,8 +915,9 @@ function HomePage() {
                 <GenerationToolbar
                   webSearch={form.webSearch}
                   onWebSearchChange={(v) => updateForm('webSearch', v)}
-                  onSettingsOpen={(section) => {
+                  onSettingsOpen={(section, providerId) => {
                     setSettingsSection(section);
+                    setSettingsProviderId(providerId);
                     setSettingsOpen(true);
                   }}
                   courseMaterials={form.courseMaterials}
@@ -1371,6 +1386,7 @@ function isCustomAvatar(src: string) {
 }
 
 function GreetingBar() {
+  const studioMode = useEducationStudioStore((state) => state.mode);
   const { t } = useI18n();
   const avatar = useUserProfileStore((s) => s.avatar);
   const nickname = useUserProfileStore((s) => s.nickname);
@@ -1387,7 +1403,8 @@ function GreetingBar() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const displayName = nickname || t('profile.defaultNickname');
+  const displayName =
+    nickname || (studioMode === 'student' ? 'Student' : t('profile.defaultNickname'));
 
   // Click-outside to collapse
   useEffect(() => {

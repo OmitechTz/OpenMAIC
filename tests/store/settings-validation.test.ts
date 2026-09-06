@@ -10,6 +10,12 @@ import {
 } from '@/lib/store/settings-validation';
 
 describe('isProviderUsable', () => {
+  it('honors learner disconnection even when a shared server key is present', () => {
+    const config = { userDisabled: true, isServerConfigured: true, models: [{ id: 'model' }] };
+    expect(isProviderUsable(config)).toBe(false);
+    expect(isLLMProviderConfigured(config)).toBe(false);
+    expect(hasUsableLLMProvider({ openrouter: config })).toBe(false);
+  });
   it('returns true when provider has client API key', () => {
     expect(isProviderUsable({ apiKey: 'sk-xxx' })).toBe(true);
   });

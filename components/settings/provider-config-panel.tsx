@@ -37,6 +37,7 @@ import type { ProviderConfig } from '@/lib/ai/providers';
 import type { ProvidersConfig } from '@/lib/types/settings';
 import { createVerifyModelRequest, formatContextWindow } from './utils';
 import { cn } from '@/lib/utils';
+import { useSettingsStore } from '@/lib/store/settings';
 
 interface ProviderConfigPanelProps {
   provider: ProviderConfig;
@@ -74,6 +75,7 @@ export function ProviderConfigPanel({
   isBuiltIn,
 }: ProviderConfigPanelProps) {
   const { t } = useI18n();
+  const setProviderConfig = useSettingsStore((state) => state.setProviderConfig);
 
   // Local state for this provider
   const [apiKey, setApiKey] = useState(initialApiKey);
@@ -210,6 +212,31 @@ export function ProviderConfigPanel({
 
   return (
     <div className="space-y-6 max-w-3xl">
+      <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+        <div className="text-sm">
+          <p className="font-medium">
+            {provider.id === 'openrouter'
+              ? 'OpenRouter — one connection, many model providers'
+              : provider.name}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {providersConfig[provider.id]?.userDisabled
+              ? 'Disconnected for your workspace. Your saved configuration is kept.'
+              : 'Choose a model here, or configure another provider with your own API key.'}
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            setProviderConfig(provider.id, {
+              userDisabled: !providersConfig[provider.id]?.userDisabled,
+            })
+          }
+        >
+          {providersConfig[provider.id]?.userDisabled ? 'Reconnect' : 'Disconnect'}
+        </Button>
+      </div>
       {/* Server-configured notice */}
       {isServerConfigured && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 p-3 text-sm text-blue-700 dark:text-blue-300">

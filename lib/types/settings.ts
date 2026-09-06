@@ -23,6 +23,8 @@ export interface ProviderSettings {
   apiKey: string;
   baseUrl: string;
   models: ModelInfo[]; // All models (user can edit/delete any)
+  /** Learner opt-out; never disconnects the shared server credential globally. */
+  userDisabled?: boolean;
 
   // Metadata (same for built-in and custom providers)
   name: string;

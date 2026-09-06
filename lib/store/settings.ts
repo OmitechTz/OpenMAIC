@@ -13,7 +13,7 @@ import type { ProviderId } from '@/lib/ai/providers';
 import type { ProvidersConfig } from '@/lib/types/settings';
 import { PROVIDERS } from '@/lib/ai/providers';
 import { findModelById, getCanonicalModelId } from '@/lib/ai/model-aliases';
-import type { ThinkingConfig } from '@/lib/types/provider';
+import type { ModelInfo, ThinkingConfig } from '@/lib/types/provider';
 import { getThinkingConfigKey, supportsConfigurableThinking } from '@/lib/ai/thinking-config';
 import type { TTSProviderId, ASRProviderId, BuiltInTTSProviderId } from '@/lib/audio/types';
 import type { AgentVoiceOverride } from '@/lib/audio/voice-resolver';
@@ -431,7 +431,9 @@ function resolveLLMSelection(
   const isUsable = (id: ProviderId) => !!config[id] && isLLMProviderConfigured(config[id]);
   const providerId = isUsable(currentProviderId)
     ? currentProviderId
-    : ((Object.keys(config) as ProviderId[]).find(isUsable) ?? ('' as ProviderId));
+    : isUsable('openrouter')
+      ? 'openrouter'
+      : ((Object.keys(config) as ProviderId[]).find(isUsable) ?? ('' as ProviderId));
   const modelId = providerId
     ? resolveSelectedLLMModel(providerId, currentModelId, config[providerId]?.models ?? [])
     : '';
@@ -1398,7 +1400,12 @@ export const useSettingsStore = create<SettingsState>()(
         // Fetch server-configured providers and merge into local state
         fetchServerProviders: async () => {
           try {
-            const res = await fetch('/api/server-providers');
+            const openrouter = get().providersConfig.openrouter;
+            const standardOpenRouter =
+              !openrouter?.baseUrl ||
+              openrouter.baseUrl.replace(/\/+$/, '') === 'https://openrouter.ai/api/v1';
+            const catalogQuery = openrouter && standardOpenRouter ? '?catalog=openrouter' : '';
+            const res = await fetch(`/api/server-providers${catalogQuery}`);
             if (!res.ok) return;
             // Managed providers expose only their allowed model list (LLM/image)
             // and presence (the "managed" flag) — never a base URL. Every
@@ -1406,6 +1413,7 @@ export const useSettingsStore = create<SettingsState>()(
             // admin/server-level force-off (#665).
             const data = (await res.json()) as {
               providers: Record<string, { models?: string[] }>;
+              openrouterModels?: ModelInfo[];
               tts: Record<string, { disabled?: boolean }>;
               asr: Record<string, { disabled?: boolean }>;
               pdf: Record<string, Record<string, never>>;
@@ -1418,6 +1426,23 @@ export const useSettingsStore = create<SettingsState>()(
             set((state) => {
               // Merge LLM providers
               const newProvidersConfig = { ...state.providersConfig };
+              const router = newProvidersConfig.openrouter;
+              if (
+                router &&
+                data.openrouterModels?.length &&
+                !data.providers.openrouter?.models?.length &&
+                (!router.baseUrl ||
+                  router.baseUrl.replace(/\/+$/, '') === 'https://openrouter.ai/api/v1')
+              ) {
+                const existingIds = new Set(router.models.map((model) => model.id));
+                newProvidersConfig.openrouter = {
+                  ...router,
+                  models: [
+                    ...router.models,
+                    ...data.openrouterModels.filter((model) => !existingIds.has(model.id)),
+                  ],
+                };
+              }
               // First reset all server flags
               for (const pid of Object.keys(newProvidersConfig)) {
                 const key = pid as ProviderId;
@@ -1643,7 +1668,13 @@ export const useSettingsStore = create<SettingsState>()(
                   .map(([id]) => id as T),
               ];
 
-              const llmFallback = buildFallback<ProviderId>(newProvidersConfig);
+              const llmFallback = buildFallback<ProviderId>(newProvidersConfig).filter((id) =>
+                isLLMProviderConfigured(newProvidersConfig[id]),
+              );
+              if (llmFallback.includes('openrouter')) {
+                llmFallback.splice(llmFallback.indexOf('openrouter'), 1);
+                llmFallback.unshift('openrouter');
+              }
               const ttsFallback = buildFallback<TTSProviderId>(newTTSConfig);
               const asrFallback = buildFallback<ASRProviderId>(newASRConfig);
               const pdfFallback = buildFallback<PDFProviderId>(newPDFConfig);

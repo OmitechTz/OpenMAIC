@@ -57,7 +57,7 @@ const MAX_COURSE_MATERIAL_SIZE_BYTES = MAX_COURSE_MATERIAL_SIZE_MB * 1024 * 1024
 export interface GenerationToolbarProps {
   webSearch: boolean;
   onWebSearchChange: (v: boolean) => void;
-  onSettingsOpen: (section?: SettingsSection) => void;
+  onSettingsOpen: (section?: SettingsSection, providerId?: ProviderId) => void;
   // PDF
   courseMaterials: SelectedCourseMaterial[];
   onCourseMaterialsAdd: (files: File[]) => void;
@@ -111,15 +111,16 @@ export function GenerationToolbar({
     isWebSearchProviderConfigured(provider, webSearchProvidersConfig[provider.id]),
   );
 
-  // Configured LLM providers (only those with valid credentials + models + endpoint)
+  // Keep every provider discoverable, including direct connections needing a key.
   const configuredProviders = providersConfig
     ? Object.entries(providersConfig)
-        .filter(([, config]) => isLLMProviderConfigured(config))
         .map(([id, config]) => ({
           id: id as ProviderId,
           name: config.name,
           icon: config.icon,
           isServerConfigured: config.isServerConfigured,
+          ready: isLLMProviderConfigured(config),
+          userDisabled: config.userDisabled,
           models:
             config.isServerConfigured && !config.apiKey && config.serverModels?.length
               ? config.models.filter((model) =>
@@ -129,6 +130,7 @@ export function GenerationToolbar({
                 )
               : config.models,
         }))
+        .sort((a, b) => (a.id === 'openrouter' ? -1 : b.id === 'openrouter' ? 1 : 0))
     : [];
 
   const currentProviderConfig = providersConfig?.[currentProviderId];
@@ -238,6 +240,7 @@ export function GenerationToolbar({
           currentProviderConfig={currentProviderConfig}
           currentModel={currentModel}
           setModel={setModel}
+          onConfigure={(providerId) => onSettingsOpen('providers', providerId)}
           thinkingConfig={currentThinkingConfig}
           onThinkingChange={(config) =>
             setThinkingConfig(currentProviderId, currentModelId, config)
@@ -776,6 +779,8 @@ interface ConfiguredProvider {
   icon?: string;
   isServerConfigured?: boolean;
   models: ModelInfo[];
+  ready: boolean;
+  userDisabled?: boolean;
 }
 
 function ModelSettingsPopover({
@@ -785,6 +790,7 @@ function ModelSettingsPopover({
   currentProviderConfig,
   currentModel,
   setModel,
+  onConfigure,
   thinkingConfig,
   onThinkingChange,
   t,
@@ -795,6 +801,7 @@ function ModelSettingsPopover({
   currentProviderConfig: { name: string; icon?: string } | undefined;
   currentModel?: ModelInfo;
   setModel: (providerId: ProviderId, modelId: string) => void;
+  onConfigure: (providerId: ProviderId) => void;
   thinkingConfig?: ThinkingConfig;
   onThinkingChange: (config: ThinkingConfig | undefined) => void;
   t: (key: string) => string;
@@ -840,10 +847,8 @@ function ModelSettingsPopover({
   const currentProviderName =
     currentProvider?.name ?? currentProviderConfig?.name ?? currentProviderId;
   const currentProviderIcon = currentProvider?.icon ?? currentProviderConfig?.icon;
-  // Under the #580 invariant this popover only renders when a usable provider
-  // exists, which guarantees a concrete model — so the label is always
-  // provider / model (no "Select Model" fallback state).
-  const currentModelLabel = currentModel?.name || currentModelId;
+  // Discovery remains available before a connection is configured.
+  const currentModelLabel = currentModel?.name || currentModelId || 'Choose a model or provider';
   const currentThinkingValue = getThinkingDisplayValue(
     currentModel?.capabilities?.thinking,
     thinkingConfig,
@@ -882,6 +887,7 @@ function ModelSettingsPopover({
               ) : (
                 <Bot className="size-3.5 shrink-0" />
               )}
+              <span className="max-w-48 truncate">{currentModelLabel}</span>
               {currentThinkingLabel && (
                 <span className="shrink-0 rounded-full bg-white/80 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-violet-700 ring-1 ring-violet-200/70 dark:bg-violet-950/50 dark:text-violet-200 dark:ring-violet-800/70">
                   {currentThinkingLabel}
@@ -941,6 +947,11 @@ function ModelSettingsPopover({
                         <div className="text-[10px] text-muted-foreground">
                           {isSearching ? `${matchingModels.length}/` : ''}
                           {provider.models.length}
+                          {!provider.ready && (
+                            <span className="block">
+                              {provider.userDisabled ? 'Disconnected' : 'Add API key'}
+                            </span>
+                          )}
                         </div>
                       </div>
                       {isCurrent && <span className="size-1.5 rounded-full bg-violet-500" />}
@@ -953,6 +964,29 @@ function ModelSettingsPopover({
 
           <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
             <div className="border-b p-3">
+              {activeProvider && (
+                <div className="mb-2 flex items-center justify-between gap-2 text-xs">
+                  <span>
+                    {activeProvider.id === 'openrouter'
+                      ? 'All these models use your OpenRouter connection.'
+                      : 'Direct provider connection'}
+                  </span>
+                  <button
+                    type="button"
+                    className="shrink-0 underline"
+                    onClick={() => {
+                      setPopoverOpen(false);
+                      onConfigure(activeProvider.id);
+                    }}
+                  >
+                    {activeProvider.ready
+                      ? 'Manage connection'
+                      : activeProvider.userDisabled
+                        ? 'Reconnect'
+                        : 'Add API key'}
+                  </button>
+                </div>
+              )}
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div className="relative min-w-0 flex-1">
                   <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -980,6 +1014,11 @@ function ModelSettingsPopover({
                   const isSelected =
                     currentProviderId === provider.id && currentModelId === model.id;
                   const selectModel = () => {
+                    if (!provider.ready) {
+                      setPopoverOpen(false);
+                      onConfigure(provider.id);
+                      return;
+                    }
                     setActiveProviderId(provider.id);
                     setModel(provider.id, model.id);
                   };

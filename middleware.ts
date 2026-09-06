@@ -73,7 +73,10 @@ async function verifyOmitechSession(token: string, secret: string): Promise<bool
     payload.aud === 'omitech-learning-studio' &&
     payload.type === 'omitech_session' &&
     typeof payload.sub === 'string' &&
-    /^[1-9][0-9]{0,18}$/.test(payload.sub) &&
+    /^[a-f0-9]{64}$/.test(payload.sub) &&
+    typeof payload.iat === 'number' &&
+    payload.iat <= now + 60 &&
+    typeof payload.jti === 'string' &&
     typeof payload.exp === 'number' &&
     payload.exp > now
   );
@@ -133,14 +136,18 @@ export async function middleware(request: NextRequest) {
     const cookie = request.cookies.get('omitech_learning_session');
     const authenticated = Boolean(
       secret &&
-        secret.length >= 32 &&
-        cookie?.value &&
-        (await verifyOmitechSession(cookie.value, secret)),
+      secret.length >= 32 &&
+      cookie?.value &&
+      (await verifyOmitechSession(cookie.value, secret)),
     );
     if (authenticated) return NextResponse.next();
     if (pathname.startsWith('/api/')) {
       return NextResponse.json(
-        { success: false, errorCode: 'OMITECH_SESSION_REQUIRED', error: 'Open from Omitech Agent.' },
+        {
+          success: false,
+          errorCode: 'OMITECH_SESSION_REQUIRED',
+          error: 'Open from Omitech Agent.',
+        },
         { status: 401 },
       );
     }

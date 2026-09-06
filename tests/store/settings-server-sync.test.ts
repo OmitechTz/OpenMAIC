@@ -204,6 +204,7 @@ async function readPersistedState(): Promise<Record<string, unknown>> {
 
 /** Full server response shape */
 interface MockServerResponse {
+  openrouterModels?: Array<{ id: string; name: string }>;
   providers?: Record<string, { models?: string[]; baseUrl?: string }>;
   tts?: Record<string, { baseUrl?: string; disabled?: boolean }>;
   asr?: Record<string, { baseUrl?: string; disabled?: boolean }>;
@@ -381,6 +382,147 @@ describe('fetchServerProviders — provider availability sync', () => {
   }
 
   // ---- Server model list filtering ----
+
+  it('defaults to OpenRouter, persists its disconnection, and respects a direct-provider choice', async () => {
+    const store = await getStore();
+    store.setState({
+      providerId: '' as never,
+      modelId: '',
+      providersConfig: {
+        ...store.getState().providersConfig,
+        openrouter: {
+          ...store.getState().providersConfig.openai,
+          name: 'OpenRouter',
+          defaultBaseUrl: 'https://openrouter.ai/api/v1',
+          models: [{ id: 'vendor/model', name: 'Model' }],
+        },
+      },
+    });
+    mockServerResponse({ providers: { openai: {}, openrouter: {} } });
+    await store.getState().fetchServerProviders();
+    expect(store.getState().providerId).toBe('openrouter');
+    store.getState().setProviderConfig('openrouter', { userDisabled: true });
+    expect(store.getState().providerId).toBe('openai');
+    mockServerResponse({ providers: { openai: {}, openrouter: {} } });
+    await store.getState().fetchServerProviders();
+    expect(store.getState().providersConfig.openrouter.userDisabled).toBe(true);
+    expect(store.getState().providerId).toBe('openai');
+    await vi.waitFor(async () => {
+      expect(await readPersistedState()).toMatchObject({
+        providersConfig: { openrouter: { userDisabled: true } },
+      });
+    });
+    // A direct connection uses the learner's key and remains selected even
+    // after they reconnect the default OpenRouter connection.
+    store.getState().setProviderConfig('anthropic', { apiKey: 'learner-test-key' });
+    store.getState().setModel('anthropic', 'claude-sonnet-4-6');
+    store.getState().setProviderConfig('openrouter', { userDisabled: false });
+    mockServerResponse({ providers: { openrouter: {} } });
+    await store.getState().fetchServerProviders();
+    expect(store.getState().providerId).toBe('anthropic');
+    expect(store.getState().providersConfig.anthropic.apiKey).toBe('learner-test-key');
+    expect(store.getState().providersConfig.anthropic.isServerConfigured).toBe(false);
+  });
+
+  it('never silently reconnects OpenRouter when it is the only configured provider', async () => {
+    const store = await getStore();
+    store.setState({
+      providersConfig: {
+        ...store.getState().providersConfig,
+        openrouter: {
+          ...store.getState().providersConfig.openai,
+          userDisabled: true,
+          models: [{ id: 'vendor/model', name: 'Model' }],
+        },
+      },
+    });
+    mockServerResponse({ providers: { openrouter: {} } });
+    await store.getState().fetchServerProviders();
+    expect(store.getState().providerId).toBe('');
+    expect(store.getState().modelId).toBe('');
+  });
+
+  it.each([false, true])(
+    'merges OpenRouter discovery for managed=%s without losing selected/custom models',
+    async (managed) => {
+      const store = await getStore();
+      const existing = [
+        { id: 'deepseek/chat', name: 'DeepSeek' },
+        { id: 'my/custom', name: 'Custom' },
+      ];
+      store.setState({
+        providerId: 'openrouter',
+        modelId: 'my/custom',
+        providersConfig: {
+          ...store.getState().providersConfig,
+          openrouter: {
+            ...store.getState().providersConfig.openai,
+            name: 'OpenRouter',
+            apiKey: managed ? '' : 'local-test-key',
+            models: existing,
+            defaultBaseUrl: 'https://openrouter.ai/api/v1',
+          },
+        },
+      });
+      const response: MockServerResponse = {
+        providers: managed ? { openrouter: {} } : {},
+        openrouterModels: [
+          { id: 'deepseek/chat', name: 'Duplicate' },
+          { id: 'google/gemini', name: 'Gemini' },
+        ],
+      };
+      mockServerResponse(response);
+      await store.getState().fetchServerProviders();
+      mockServerResponse(response);
+      await store.getState().fetchServerProviders();
+      expect(store.getState().providersConfig.openrouter.models).toEqual([
+        ...existing,
+        { id: 'google/gemini', name: 'Gemini' },
+      ]);
+      expect(store.getState().modelId).toBe('my/custom');
+      expect(store.getState().providerId).toBe('openrouter');
+    },
+  );
+
+  it('keeps the OpenRouter administrator allowlist authoritative over discovery', async () => {
+    const store = await getStore();
+    store.setState({
+      providersConfig: {
+        ...store.getState().providersConfig,
+        openrouter: {
+          ...store.getState().providersConfig.openai,
+          models: [{ id: 'allowed', name: 'Allowed' }],
+        },
+      },
+    });
+    mockServerResponse({
+      providers: { openrouter: { models: ['allowed'] } },
+      openrouterModels: [{ id: 'google/gemini', name: 'Gemini' }],
+    });
+    await store.getState().fetchServerProviders();
+    expect(store.getState().providersConfig.openrouter.models.map((model) => model.id)).toEqual([
+      'allowed',
+    ]);
+  });
+
+  it('does not expand a custom OpenRouter endpoint with public catalog models', async () => {
+    const store = await getStore();
+    store.setState({
+      providersConfig: {
+        ...store.getState().providersConfig,
+        openrouter: {
+          ...store.getState().providersConfig.openai,
+          baseUrl: 'https://gateway.example/v1',
+          models: [{ id: 'custom', name: 'Custom' }],
+        },
+      },
+    });
+    mockServerResponse({ openrouterModels: [{ id: 'google/gemini', name: 'Gemini' }] });
+    await store.getState().fetchServerProviders();
+    expect(store.getState().providersConfig.openrouter.models.map((model) => model.id)).toEqual([
+      'custom',
+    ]);
+  });
 
   it('filters models to only those the server allows', async () => {
     const store = await getStore();

@@ -199,9 +199,15 @@ interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialSection?: SettingsSection;
+  initialProviderId?: ProviderId;
 }
 
-export function SettingsDialog({ open, onOpenChange, initialSection }: SettingsDialogProps) {
+export function SettingsDialog({
+  open,
+  onOpenChange,
+  initialSection,
+  initialProviderId,
+}: SettingsDialogProps) {
   const { t } = useI18n();
 
   // Get settings from store
@@ -230,6 +236,12 @@ export function SettingsDialog({ open, onOpenChange, initialSection }: SettingsD
   // Navigation
   const [activeSection, setActiveSection] = useState<SettingsSection>('providers');
   const [selectedProviderId, setSelectedProviderId] = useState<ProviderId>(providerId);
+  useEffect(() => {
+    if (open && initialProviderId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Open the connection requested by the model picker.
+      setSelectedProviderId(initialProviderId);
+    }
+  }, [open, initialProviderId]);
   const [selectedPdfProviderId, setSelectedPdfProviderId] = useState<PDFProviderId>(pdfProviderId);
   const [selectedWebSearchProviderId, setSelectedWebSearchProviderId] =
     useState<WebSearchProviderId>(webSearchProviderId);

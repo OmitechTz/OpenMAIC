@@ -28,6 +28,9 @@ import {
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { EducationWorkbench } from './education-workbench';
+import { LearningProgress } from './practice-panel';
 
 import {
   buildEducationWorkflowPrompt,
@@ -47,7 +50,7 @@ import type { SelectedCourseMaterial } from '@/lib/types/generation';
 import { deleteDocumentBlob, loadDocumentBlob, storeDocumentBlob } from '@/lib/utils/image-storage';
 import { cn } from '@/lib/utils/cn';
 
-type StudioTab = 'create' | 'library' | 'team' | 'progress' | 'integrations';
+type StudioTab = 'create' | 'library' | 'team' | 'progress' | 'integrations' | 'downloads';
 
 interface LearningStudioHubProps {
   generatedExperienceCount: number;
@@ -64,17 +67,6 @@ const LEVELS: { id: EducationLevel; label: string }[] = [
   { id: 'postgraduate', label: 'Postgraduate' },
   { id: 'professional', label: 'Professional learning' },
 ];
-
-const WORKFLOW_ICONS: Record<EducationWorkflowId, typeof BookOpen> = {
-  'lesson-plan': BookOpen,
-  syllabus: CalendarDays,
-  'lecture-slides': Presentation,
-  assessment: ClipboardCheck,
-  'class-activity': Users,
-  'research-synthesis': BrainCircuit,
-  'student-feedback': FileText,
-  'study-support': GraduationCap,
-};
 
 const ROLE_ICONS: Record<TeachingRoleId, typeof BookOpen> = {
   'course-designer': CalendarDays,
@@ -500,9 +492,14 @@ export function LearningStudioHub({
 
   const tabs: { id: StudioTab; label: string; icon: typeof BookOpen }[] = [
     { id: 'create', label: 'Create', icon: Sparkles },
-    { id: 'library', label: 'Course library', icon: Library },
-    { id: 'team', label: 'Teaching team', icon: Users },
-    { id: 'progress', label: 'Dashboard', icon: BarChart3 },
+    { id: 'library', label: mode === 'teacher' ? 'Course library' : 'My courses', icon: Library },
+    {
+      id: 'team',
+      label: mode === 'teacher' ? 'Teaching preferences' : 'Learning preferences',
+      icon: Users,
+    },
+    { id: 'progress', label: 'My progress', icon: BarChart3 },
+    { id: 'downloads', label: 'Downloads guide', icon: FileText },
     { id: 'integrations', label: 'Integrations', icon: Link2 },
   ];
 
@@ -539,6 +536,7 @@ export function LearningStudioHub({
                   onChange={(event) => selectCourse(event.target.value || null)}
                   className="h-8 appearance-none rounded-xl border border-border bg-background pl-3 pr-8 text-xs font-medium outline-none focus:border-primary"
                 >
+                  <option value="">All courses</option>
                   {courses.map((course) => (
                     <option key={course.id} value={course.id}>
                       {course.name}
@@ -622,7 +620,8 @@ export function LearningStudioHub({
                           : 'What would you like to learn?'}
                       </h3>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        Choose a workflow, then refine the generated brief in the composer above.
+                        Choose a workflow, customize its inputs, then create a classroom or a
+                        downloadable resource.
                       </p>
                     </div>
                     <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
@@ -632,92 +631,81 @@ export function LearningStudioHub({
                         : 'Guided-learning safeguards active'}
                     </div>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    {(Object.keys(EDUCATION_WORKFLOWS) as EducationWorkflowId[]).map((id) => {
-                      const workflow = EDUCATION_WORKFLOWS[id];
-                      const Icon = WORKFLOW_ICONS[id];
-                      return (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => chooseWorkflow(id)}
-                          className="group rounded-2xl border border-border/70 bg-background p-4 text-left transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg hover:shadow-primary/[0.06]"
+                  <EducationWorkbench
+                    mode={mode}
+                    course={selectedCourse}
+                    currentMaterials={currentMaterials}
+                    onClassroomPrompt={(prompt) => {
+                      onPromptChange(prompt);
+                      onFocusComposer();
+                    }}
+                  />
+                  {mode === 'teacher' && (
+                    <div className="mt-4 grid gap-3 rounded-2xl border border-border/70 bg-muted/25 p-4 md:grid-cols-4">
+                      <label className="text-[11px] font-medium">
+                        Assessment questions
+                        <input
+                          type="number"
+                          min={1}
+                          max={100}
+                          value={assessment.questionCount}
+                          onChange={(event) =>
+                            setAssessment((current) => ({
+                              ...current,
+                              questionCount: Math.max(
+                                1,
+                                Math.min(100, Number(event.target.value) || 1),
+                              ),
+                            }))
+                          }
+                          className="mt-1.5 h-9 w-full rounded-xl border border-border bg-background px-3 text-xs"
+                        />
+                      </label>
+                      <label className="text-[11px] font-medium">
+                        Difficulty
+                        <select
+                          value={assessment.difficulty}
+                          onChange={(event) =>
+                            setAssessment((current) => ({
+                              ...current,
+                              difficulty: event.target.value as AssessmentOptions['difficulty'],
+                            }))
+                          }
+                          className="mt-1.5 h-9 w-full rounded-xl border border-border bg-background px-3 text-xs"
                         >
-                          <div className="flex size-9 items-center justify-center rounded-xl bg-primary/8 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
-                            <Icon className="size-4" />
-                          </div>
-                          <p className="mt-3 text-sm font-semibold">{workflow.title}</p>
-                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                            {workflow.description}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-4 grid gap-3 rounded-2xl border border-border/70 bg-muted/25 p-4 md:grid-cols-4">
-                    <label className="text-[11px] font-medium">
-                      Assessment questions
-                      <input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={assessment.questionCount}
-                        onChange={(event) =>
-                          setAssessment((current) => ({
-                            ...current,
-                            questionCount: Math.max(
-                              1,
-                              Math.min(100, Number(event.target.value) || 1),
-                            ),
-                          }))
-                        }
-                        className="mt-1.5 h-9 w-full rounded-xl border border-border bg-background px-3 text-xs"
-                      />
-                    </label>
-                    <label className="text-[11px] font-medium">
-                      Difficulty
-                      <select
-                        value={assessment.difficulty}
-                        onChange={(event) =>
-                          setAssessment((current) => ({
-                            ...current,
-                            difficulty: event.target.value as AssessmentOptions['difficulty'],
-                          }))
-                        }
-                        className="mt-1.5 h-9 w-full rounded-xl border border-border bg-background px-3 text-xs"
+                          <option value="introductory">Introductory</option>
+                          <option value="mixed">Mixed</option>
+                          <option value="advanced">Advanced</option>
+                        </select>
+                      </label>
+                      <label className="text-[11px] font-medium">
+                        Bloom level
+                        <select
+                          value={assessment.bloomLevel}
+                          onChange={(event) =>
+                            setAssessment((current) => ({
+                              ...current,
+                              bloomLevel: event.target.value as AssessmentOptions['bloomLevel'],
+                            }))
+                          }
+                          className="mt-1.5 h-9 w-full rounded-xl border border-border bg-background px-3 text-xs"
+                        >
+                          <option value="mixed">Mixed</option>
+                          <option value="remember-understand">Remember & understand</option>
+                          <option value="apply-analyse">Apply & analyse</option>
+                          <option value="evaluate-create">Evaluate & create</option>
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => chooseWorkflow('assessment')}
+                        className="mt-auto inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground"
                       >
-                        <option value="introductory">Introductory</option>
-                        <option value="mixed">Mixed</option>
-                        <option value="advanced">Advanced</option>
-                      </select>
-                    </label>
-                    <label className="text-[11px] font-medium">
-                      Bloom level
-                      <select
-                        value={assessment.bloomLevel}
-                        onChange={(event) =>
-                          setAssessment((current) => ({
-                            ...current,
-                            bloomLevel: event.target.value as AssessmentOptions['bloomLevel'],
-                          }))
-                        }
-                        className="mt-1.5 h-9 w-full rounded-xl border border-border bg-background px-3 text-xs"
-                      >
-                        <option value="mixed">Mixed</option>
-                        <option value="remember-understand">Remember & understand</option>
-                        <option value="apply-analyse">Apply & analyse</option>
-                        <option value="evaluate-create">Evaluate & create</option>
-                      </select>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => chooseWorkflow('assessment')}
-                      className="mt-auto inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground"
-                    >
-                      <ClipboardCheck className="size-3.5" />
-                      Build assessment
-                    </button>
-                  </div>
+                        <ClipboardCheck className="size-3.5" />
+                        Build assessment
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : null}
 
@@ -824,9 +812,14 @@ export function LearningStudioHub({
               {tab === 'team' ? (
                 <div>
                   <div>
-                    <h3 className="text-sm font-semibold">AI teaching team</h3>
+                    <h3 className="text-sm font-semibold">
+                      {mode === 'teacher'
+                        ? 'Teaching perspectives'
+                        : 'Learning support preferences'}
+                    </h3>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Selected roles collaborate in every generated brief.
+                      These perspectives guide classroom prompts. They do not represent independent
+                      specialist reviews.
                     </p>
                   </div>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -907,8 +900,9 @@ export function LearningStudioHub({
 
               {tab === 'progress' ? (
                 <div>
+                  <LearningProgress courseId={selectedCourseId} />
                   <div>
-                    <h3 className="text-sm font-semibold">Teacher dashboard</h3>
+                    <h3 className="text-sm font-semibold">Workspace overview</h3>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       A private overview of your teaching workspace. Student performance is not
                       collected automatically.
@@ -978,14 +972,61 @@ export function LearningStudioHub({
                       <ShieldCheck className="size-5 text-emerald-600" />
                       <h4 className="mt-3 text-sm font-semibold">Privacy-first analytics</h4>
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        This dashboard measures your content setup, not student surveillance.
-                        Participation and achievement data can be added later only with
-                        institutional approval.
+                        This dashboard measures your content setup, not student surveillance. Your
+                        own practice history is shown separately above and is not an institutional
+                        gradebook.
                       </p>
                     </div>
                   </div>
                 </div>
               ) : null}
+
+              {tab === 'downloads' && (
+                <section className="space-y-4" aria-label="Learning Studio downloads guide">
+                  <h3 className="font-semibold">Choose the download that matches your output</h3>
+                  <ol className="list-decimal pl-5 space-y-2 text-sm">
+                    <li>
+                      <strong>Lecture slides:</strong> open your generated classroom and select
+                      Download → Export PPTX. Speaker notes are included.
+                    </li>
+                    <li>
+                      <strong>Interactive activities:</strong> choose Export Resource Pack for HTML
+                      activities and available slides. PowerPoint does not preserve simulation
+                      interactivity.
+                    </li>
+                    <li>
+                      <strong>Classroom backup:</strong> choose Classroom ZIP to save content and
+                      assets for reimport.
+                    </li>
+                    <li>
+                      <strong>Narration:</strong> choose Download Script → Word or Markdown. This
+                      exports spoken narration, not a separately organized study guide.
+                    </li>
+                    <li>
+                      <strong>Study notes, lesson plans and assessments:</strong> generate a
+                      resource under Create, then use its Word, PDF / Print, Markdown or offline
+                      HTML downloads. Assessments have separate student and answer-key editions.
+                    </li>
+                    <li>
+                      <strong>Video:</strong> when enabled, use Video export. MP4 requires the
+                      render service; otherwise download the render-project ZIP.
+                    </li>
+                    <li>
+                      <strong>Research manuscripts:</strong> open a saved resource, review the
+                      selected-text handoff to Research Studio, then start research there. Its own
+                      job page provides manuscript downloads.
+                    </li>
+                  </ol>
+                  <p className="text-xs text-muted-foreground">
+                    Classroom downloads wait until scenes and media finish processing. Retry or
+                    remove failed scenes when needed. Source attribution and generated educational
+                    content still need human review.
+                  </p>
+                  <Button type="button" onClick={() => setTab('create')}>
+                    Open resource creator and saved resources
+                  </Button>
+                </section>
+              )}
 
               {tab === 'integrations' ? (
                 <div>

@@ -18,6 +18,18 @@ function parentOrigins(): string[] {
   return values;
 }
 
+export function handoffResearchToParent(payload: { topic: string; focus: string }): boolean {
+  if (typeof window === 'undefined' || window.parent === window || !parentOrigins().length)
+    return false;
+  for (const origin of parentOrigins()) {
+    window.parent.postMessage(
+      { type: 'omitech:learning-studio:research-handoff', payload },
+      origin,
+    );
+  }
+  return true;
+}
+
 export function navigateOmitechParent(path: string): boolean {
   if (typeof window === 'undefined' || !ALLOWED_PARENT_PATHS.has(path)) return false;
   for (const origin of parentOrigins()) {

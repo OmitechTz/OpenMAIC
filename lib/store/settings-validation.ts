@@ -6,6 +6,7 @@
  */
 
 export type ProviderCfgLike = {
+  userDisabled?: boolean;
   isServerConfigured?: boolean;
   apiKey?: string;
   requiresApiKey?: boolean;
@@ -26,7 +27,7 @@ export function isProviderUsable(cfg: ProviderCfgLike | undefined): boolean {
   if (!cfg) return false;
   // Operator force-disable wins over any local credential path so the current
   // selection is re-pointed away from a server-disabled provider (#665).
-  if (cfg.serverDisabled) return false;
+  if (cfg.serverDisabled || cfg.userDisabled) return false;
   if (cfg.isServerConfigured) return true;
   // Keyless providers (e.g. Ollama) need an explicit user-provided baseUrl
   if (cfg.requiresApiKey === false) return !!cfg.baseUrl;
@@ -85,6 +86,7 @@ export function resolveSelectedModel(
 }
 
 export interface LLMProviderCfgLike {
+  userDisabled?: boolean;
   requiresApiKey?: boolean;
   apiKey?: string;
   isServerConfigured?: boolean;
@@ -108,6 +110,7 @@ export interface LLMProviderCfgLike {
  * Always also requires ≥1 model.
  */
 export function isLLMProviderConfigured(config: LLMProviderCfgLike): boolean {
+  if (config.userDisabled) return false;
   if (!config.models || config.models.length < 1) return false;
   if (config.isServerConfigured) return true;
   if (config.requiresApiKey === false) return !!config.baseUrl;

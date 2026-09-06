@@ -1,6 +1,9 @@
 import { createHmac } from 'node:crypto';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
+import { middleware } from '@/middleware';
+import { POST as exchangeSession } from '@/app/api/omitech/session/route';
 
 import {
   createOmitechSessionToken,
@@ -88,5 +91,59 @@ describe('Omitech Learning Studio session', () => {
       ownerId: `omitech:${SUBJECT}`,
       name: 'Learner',
     });
+  });
+
+  it('allows generation through middleware after exchanging a pseudonymous launch token', async () => {
+    const response = await exchangeSession(
+      new Request('http://localhost/api/omitech/session', {
+        method: 'POST',
+        body: JSON.stringify({ launch_token: launchToken() }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    const cookie = response.cookies.get('omitech_learning_session')!;
+    expect(cookie.value).toBeTruthy();
+    for (const path of [
+      '/api/server-providers',
+      '/api/education/generate',
+      '/api/generate/scene-outlines-stream',
+      '/api/generate/scene-content',
+    ]) {
+      const result = await middleware(
+        new NextRequest(`http://localhost${path}`, {
+          method: 'POST',
+          headers: { cookie: `${cookie.name}=${cookie.value}` },
+        }),
+      );
+      expect(result.headers.get('x-middleware-next')).toBe('1');
+    }
+  });
+
+  it.each([
+    { sub: '123' },
+    { exp: 1 },
+    { aud: 'wrong' },
+    { iat: Math.floor(Date.now() / 1000) + 3600 },
+    { jti: null },
+    { type: 'openmaic_launch' },
+  ])('rejects invalid session claims at both verification layers: %j', async (overrides) => {
+    const token = launchToken({ type: 'omitech_session', ...overrides });
+    const headers = new Headers({ cookie: `omitech_learning_session=${token}` });
+    expect(readOmitechIdentity(headers)).toBeUndefined();
+    const result = await middleware(
+      new NextRequest('http://localhost/api/generate-outline', { headers }),
+    );
+    expect(result.status).toBe(401);
+  });
+
+  it('rejects a missing or tampered session before generation', async () => {
+    for (const token of ['', `${launchToken({ type: 'omitech_session' })}x`]) {
+      const result = await middleware(
+        new NextRequest('http://localhost/api/generate-outline', {
+          headers: { cookie: `omitech_learning_session=${token}` },
+        }),
+      );
+      expect(result.status).toBe(401);
+    }
   });
 });
