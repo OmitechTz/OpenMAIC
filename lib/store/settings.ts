@@ -1399,14 +1399,28 @@ export const useSettingsStore = create<SettingsState>()(
 
         // Fetch server-configured providers and merge into local state
         fetchServerProviders: async () => {
+          const { useProviderHealth } = await import('./provider-health');
+          useProviderHealth.setState({ status: 'checking', message: '' });
           try {
             const openrouter = get().providersConfig.openrouter;
             const standardOpenRouter =
               !openrouter?.baseUrl ||
               openrouter.baseUrl.replace(/\/+$/, '') === 'https://openrouter.ai/api/v1';
             const catalogQuery = openrouter && standardOpenRouter ? '?catalog=openrouter' : '';
-            const res = await fetch(`/api/server-providers${catalogQuery}`);
-            if (!res.ok) return;
+            const res = await fetch(`/api/server-providers${catalogQuery}`, {
+              signal: AbortSignal.timeout(15000),
+              cache: 'no-store',
+            });
+            if (!res.ok) {
+              useProviderHealth.setState({
+                status: 'error',
+                message:
+                  res.status === 401
+                    ? 'Your Learning Studio session expired. Reload Learning Studio to reconnect.'
+                    : 'AI connection settings could not be loaded. Retry the connection check.',
+              });
+              return;
+            }
             // Managed providers expose only their allowed model list (LLM/image)
             // and presence (the "managed" flag) — never a base URL. Every
             // capability section carries an optional `disabled` flag for
@@ -1942,8 +1956,13 @@ export const useSettingsStore = create<SettingsState>()(
                 ...(autoTtsEnabled !== undefined && { ttsEnabled: autoTtsEnabled }),
               };
             });
+            useProviderHealth.setState({ status: 'ready', message: '' });
           } catch (e) {
-            // Silently fail — server providers are optional
+            useProviderHealth.setState({
+              status: 'error',
+              message:
+                'AI connection settings could not be loaded. Your prompt is saved; retry the connection check.',
+            });
             log.warn('Failed to fetch server providers:', e);
           }
         },

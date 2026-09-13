@@ -82,6 +82,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useDraftCache } from '@/lib/hooks/use-draft-cache';
 import { SpeechButton } from '@/components/audio/speech-button';
 import { LearningStudioHub } from '@/components/education/learning-studio-hub';
+import { GenerationReadiness } from '@/components/education/generation-readiness';
+import { useLearningResourcesStore } from '@/lib/store/learning-resources';
 import { useEducationStudioStore } from '@/lib/store/education-studio';
 import { useImportClassroom } from '@/lib/import/use-import-classroom';
 import {
@@ -169,6 +171,10 @@ function HomePage() {
     if (workbenchEntryEnabled) router.prefetch('/workspace');
   }, [router, workbenchEntryEnabled]);
   const [form, setForm] = useState<FormState>(initialFormState);
+  const sharedTopic = useLearningResourcesStore((s) => s.draft.topic);
+  useEffect(() => {
+    setForm((previous) => ({ ...previous, requirement: sharedTopic }));
+  }, [sharedTopic]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsProviderId, setSettingsProviderId] =
     useState<import('@/lib/types/provider').ProviderId>();
@@ -226,7 +232,8 @@ function HomePage() {
     if (draftRestoredRef.current) return;
     if (!cachedRequirement) return;
     draftRestoredRef.current = true;
-    setForm((prev) => (prev.requirement ? prev : { ...prev, requirement: cachedRequirement }));
+    if (!useLearningResourcesStore.getState().draft.topic)
+      useLearningResourcesStore.getState().setDraft({ topic: cachedRequirement.slice(0, 20000) });
   }, [cachedRequirement]);
 
   const [themeOpen, setThemeOpen] = useState(false);
@@ -514,6 +521,8 @@ function HomePage() {
   const currentFolder = folders.find((f) => f.id === currentFolderId);
 
   const updateForm = <K extends keyof FormState>(field: K, value: FormState[K]) => {
+    if (field === 'requirement')
+      useLearningResourcesStore.getState().setDraft({ topic: value as string });
     setForm((prev) => ({ ...prev, [field]: value }));
     try {
       if (field === 'webSearch') localStorage.setItem(WEB_SEARCH_STORAGE_KEY, String(value));
@@ -574,6 +583,12 @@ function HomePage() {
   };
 
   const handleGenerate = async () => {
+    if (!hasUsableProvider) {
+      setSettingsSection('providers');
+      setSettingsProviderId('openrouter');
+      setSettingsOpen(true);
+      return;
+    }
     // No model/provider guard here: generation is gated by `canGenerate`
     // (requires a usable provider), and under the #580 invariant a usable
     // provider always has a concrete model. State A (no usable provider)
@@ -904,7 +919,11 @@ function HomePage() {
               }
               className="w-full resize-none border-0 bg-transparent px-4 pt-1 pb-2 text-[13px] leading-relaxed placeholder:text-muted-foreground/40 focus:outline-none min-h-[140px] max-h-[300px]"
               value={form.requirement}
-              onChange={(e) => updateForm('requirement', e.target.value)}
+              onChange={(e) => {
+                updateForm('requirement', e.target.value);
+              }}
+              maxLength={20000}
+              aria-label="Shared learning prompt"
               onKeyDown={handleKeyDown}
               rows={4}
             />
@@ -949,6 +968,7 @@ function HomePage() {
                   setForm((prev) => {
                     const next = prev.requirement + (prev.requirement ? ' ' : '') + text;
                     updateRequirementCache(next);
+                    useLearningResourcesStore.getState().setDraft({ topic: next.slice(0, 20000) });
                     return { ...prev, requirement: next };
                   });
                 }}
@@ -957,16 +977,21 @@ function HomePage() {
               {/* Send button */}
               <button
                 onClick={handleGenerate}
-                disabled={!canGenerate || preparingGenerate}
+                disabled={!form.requirement.trim() || preparingGenerate}
+                aria-describedby="generation-readiness"
                 className={cn(
                   'shrink-0 h-8 rounded-lg flex items-center justify-center gap-1.5 transition-all px-3',
-                  canGenerate && !preparingGenerate
+                  !!form.requirement.trim() && !preparingGenerate
                     ? 'bg-primary text-primary-foreground hover:opacity-90 shadow-sm cursor-pointer'
                     : 'bg-muted text-muted-foreground/40 cursor-not-allowed',
                 )}
               >
                 <span className="text-xs font-medium">
-                  {preparingGenerate ? t('stage.generating') : t('toolbar.enterClassroom')}
+                  {preparingGenerate
+                    ? t('stage.generating')
+                    : !hasUsableProvider
+                      ? 'Connect AI to create'
+                      : t('toolbar.enterClassroom')}
                 </span>
                 {preparingGenerate ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -978,6 +1003,13 @@ function HomePage() {
           </div>
         </motion.div>
 
+        <GenerationReadiness
+          onConfigure={() => {
+            setSettingsSection('providers');
+            setSettingsProviderId('openrouter');
+            setSettingsOpen(true);
+          }}
+        />
         {showVocationalTestUi && (
           <motion.div
             initial={{ opacity: 0, y: -4 }}

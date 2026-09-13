@@ -24,23 +24,41 @@ async function proxy(request: Request, context: { params: Promise<{ path: string
     return NextResponse.json({ error: 'Omitech Agent connection is unavailable' }, { status: 503 });
   }
   const { path } = await context.params;
+  if (path.some((part) => !/^[a-zA-Z0-9_-]+$/.test(part))) {
+    return NextResponse.json({ error: 'Invalid classroom path' }, { status: 400 });
+  }
   const source = new URL(request.url);
   const target = `${base}/api/v1/learning-studio/${path.map(encodeURIComponent).join('/')}${source.search}`;
-  const response = await fetch(target, {
-    method: request.method,
-    headers: {
-      authorization: `Bearer ${decodeURIComponent(token)}`,
-      ...(request.headers.get('content-type')
-        ? { 'content-type': request.headers.get('content-type') as string }
-        : {}),
-    },
-    body: request.method === 'GET' ? undefined : await request.arrayBuffer(),
-    cache: 'no-store',
-  });
-  return new NextResponse(response.body, {
-    status: response.status,
-    headers: { 'content-type': response.headers.get('content-type') ?? 'application/json' },
-  });
+  try {
+    const response = await fetch(target, {
+      method: request.method,
+      headers: {
+        authorization: `Bearer ${decodeURIComponent(token)}`,
+        ...(request.headers.get('content-type')
+          ? { 'content-type': request.headers.get('content-type') as string }
+          : {}),
+      },
+      body: request.method === 'GET' ? undefined : await request.arrayBuffer(),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(55000),
+      redirect: 'error',
+    });
+    return new NextResponse(response.body, {
+      status: response.status,
+      headers: {
+        'content-type': response.headers.get('content-type') ?? 'application/json',
+        'cache-control': 'no-store',
+      },
+    });
+  } catch {
+    return NextResponse.json(
+      {
+        error:
+          'The classroom service could not complete the request. Your draft is kept; refresh and retry.',
+      },
+      { status: 503 },
+    );
+  }
 }
 
 export const GET = proxy;

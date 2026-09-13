@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BarChart3,
   BookOpen,
@@ -30,6 +30,7 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { EducationWorkbench } from './education-workbench';
+import { ClassroomBoard } from './classroom-board';
 import { LearningProgress } from './practice-panel';
 
 import {
@@ -50,7 +51,14 @@ import type { SelectedCourseMaterial } from '@/lib/types/generation';
 import { deleteDocumentBlob, loadDocumentBlob, storeDocumentBlob } from '@/lib/utils/image-storage';
 import { cn } from '@/lib/utils/cn';
 
-type StudioTab = 'create' | 'library' | 'team' | 'progress' | 'integrations' | 'downloads';
+type StudioTab =
+  | 'create'
+  | 'library'
+  | 'team'
+  | 'progress'
+  | 'integrations'
+  | 'downloads'
+  | 'classes';
 
 interface LearningStudioHubProps {
   generatedExperienceCount: number;
@@ -194,10 +202,11 @@ function CourseDialog({ onClose }: { onClose: () => void }) {
               Course workspace
             </p>
             <h2 id="new-course-title" className="mt-1 text-xl font-semibold">
-              Create a course
+              Create a personal collection
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Group resources, teaching roles, learning experiences, and assessments by course.
+              Organize private authoring resources. Use Classes and assignments to teach enrolled
+              students.
             </p>
           </div>
           <button
@@ -285,7 +294,7 @@ function CourseDialog({ onClose }: { onClose: () => void }) {
             disabled={!name.trim()}
             className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40"
           >
-            Create course
+            Create collection
           </button>
         </div>
       </div>
@@ -385,6 +394,11 @@ export function LearningStudioHub({
   onFocusComposer,
 }: LearningStudioHubProps) {
   const [tab, setTab] = useState<StudioTab>('create');
+  useEffect(() => {
+    const openCreate = () => setTab('create');
+    window.addEventListener('omitech:open-education-create', openCreate);
+    return () => window.removeEventListener('omitech:open-education-create', openCreate);
+  }, []);
   const [expanded, setExpanded] = useState(true);
   const [courseDialogOpen, setCourseDialogOpen] = useState(false);
   const [integrationDialog, setIntegrationDialog] = useState<EducationIntegrationId | null>(null);
@@ -491,8 +505,9 @@ export function LearningStudioHub({
   };
 
   const tabs: { id: StudioTab; label: string; icon: typeof BookOpen }[] = [
+    { id: 'classes', label: 'Classes and assignments', icon: Users },
     { id: 'create', label: 'Create', icon: Sparkles },
-    { id: 'library', label: mode === 'teacher' ? 'Course library' : 'My courses', icon: Library },
+    { id: 'library', label: 'Personal library', icon: Library },
     {
       id: 'team',
       label: mode === 'teacher' ? 'Teaching preferences' : 'Learning preferences',
@@ -516,27 +531,27 @@ export function LearningStudioHub({
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">
-                {selectedCourse ? selectedCourse.name : 'Set up your first course'}
+                {selectedCourse ? selectedCourse.name : 'Personal authoring library'}
               </p>
               <p className="truncate text-[11px] text-muted-foreground">
                 {selectedCourse
                   ? [selectedCourse.code, selectedCourse.term, selectedCourse.audience]
                       .filter(Boolean)
                       .join(' · ') || 'Course workspace'
-                  : 'Organize resources, teaching roles, lessons, assessments, and progress'}
+                  : 'Create resources here; teach enrolled students in Classes and assignments'}
               </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {courses.length > 0 ? (
               <label className="relative">
-                <span className="sr-only">Select course</span>
+                <span className="sr-only">Select personal collection</span>
                 <select
                   value={selectedCourseId ?? ''}
                   onChange={(event) => selectCourse(event.target.value || null)}
                   className="h-8 appearance-none rounded-xl border border-border bg-background pl-3 pr-8 text-xs font-medium outline-none focus:border-primary"
                 >
-                  <option value="">All courses</option>
+                  <option value="">All personal collections</option>
                   {courses.map((course) => (
                     <option key={course.id} value={course.id}>
                       {course.name}
@@ -551,7 +566,7 @@ export function LearningStudioHub({
               onClick={() => setCourseDialogOpen(true)}
               className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-border px-3 text-xs font-semibold hover:bg-muted"
             >
-              <Plus className="size-3.5" /> Course
+              <Plus className="size-3.5" /> Collection
             </button>
             <div className="flex h-8 rounded-xl bg-muted p-0.5" aria-label="Learning Studio mode">
               {(['teacher', 'student'] as const).map((item) => (
@@ -610,6 +625,7 @@ export function LearningStudioHub({
             </nav>
 
             <div className="p-4 sm:p-5">
+              {tab === 'classes' && <ClassroomBoard />}
               {tab === 'create' ? (
                 <div>
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -628,7 +644,7 @@ export function LearningStudioHub({
                       <ShieldCheck className="size-3.5 text-emerald-600" />
                       {mode === 'teacher'
                         ? `${teachingRoleIds.length} teaching roles active`
-                        : 'Guided-learning safeguards active'}
+                        : 'Personal guided practice · class rules apply to assignments'}
                     </div>
                   </div>
                   <EducationWorkbench
