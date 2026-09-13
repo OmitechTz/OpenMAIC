@@ -21,6 +21,7 @@ import { STUDENT_WORKFLOWS, TEACHER_OUTPUTS } from '@/lib/education/student-work
 import { importSourceText } from '@/lib/education/source-import';
 import type { SelectedCourseMaterial } from '@/lib/types/generation';
 import { ResourceView } from './resource-view';
+import { SubjectTemplates } from './subject-templates';
 import { toast } from 'sonner';
 
 export function EducationWorkbench({
@@ -53,6 +54,8 @@ export function EducationWorkbench({
   const [error, setError] = useState('');
   const [importing, setImporting] = useState(false);
   const [sourceTitle, setSourceTitle] = useState('');
+  const [sourceLocation, setSourceLocation] = useState('');
+  const [generationStage, setGenerationStage] = useState('');
   const [sourceText, setSourceText] = useState('');
   const controller = useRef<AbortController | null>(null);
   const importController = useRef<AbortController | null>(null);
@@ -100,6 +103,7 @@ export function EducationWorkbench({
   };
   const generate = async () => {
     setError('');
+    setGenerationStage('');
     const validated = briefSchema.safeParse({
       ...draft,
       mode,
@@ -140,6 +144,7 @@ export function EducationWorkbench({
     const abort = new AbortController();
     controller.current = abort;
     setBusy(true);
+    setGenerationStage('Generating the resource from your reviewed brief…');
     try {
       const body = {
         ...brief,
@@ -161,11 +166,14 @@ export function EducationWorkbench({
       const payload = await response.json();
       if (!response.ok || !payload.success)
         throw new Error(payload.error || 'Resource generation failed.');
+      setGenerationStage('Checking structure, questions and source references…');
       const content = parseEducationContent(JSON.stringify(payload.content), brief);
       if (abort.signal.aborted) return;
       setSelectedId(save(brief, content, course?.id || null));
+      setGenerationStage('Resource saved. Review it before sharing with your class.');
       toast.success('Resource saved. You can read, edit, download and practise below.');
     } catch (e) {
+      setGenerationStage('');
       setError(
         abort.signal.aborted
           ? 'Generation cancelled. Your brief is saved.'
@@ -179,6 +187,7 @@ export function EducationWorkbench({
   };
   return (
     <div className="space-y-5">
+      {mode === 'teacher' && <SubjectTemplates />}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {presets.map((preset) => (
           <button
@@ -215,12 +224,42 @@ export function EducationWorkbench({
       >
         <fieldset disabled={busy} className="space-y-3">
           <legend className="font-semibold">Customize your learning output</legend>
+          <p className="text-xs">
+            This prompt is shared with the main composer. Choose a resource format here or create an
+            interactive classroom above.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <label>
+              Learning support
+              <select
+                className="block rounded border p-2"
+                value={draft.differentiation || 'standard'}
+                onChange={(e) =>
+                  setDraft({
+                    differentiation: e.target.value as 'supported' | 'standard' | 'extension',
+                  })
+                }
+              >
+                <option value="supported">Supported: more scaffolding</option>
+                <option value="standard">Standard</option>
+                <option value="extension">Extension</option>
+              </select>
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={!!draft.bilingual}
+                onChange={(e) => setDraft({ bilingual: e.target.checked })}
+              />{' '}
+              English / Kiswahili glossary and directions
+            </label>
+          </div>
           <label className="block text-sm">
             Topic or learning question
             <textarea
               required
               minLength={3}
-              maxLength={1000}
+              maxLength={20000}
               className="mt-1 w-full rounded border bg-background p-2"
               value={draft.topic}
               onChange={(e) => setDraft({ topic: e.target.value })}
@@ -350,6 +389,11 @@ export function EducationWorkbench({
               </div>
             )}
             <Field label="Source title" value={sourceTitle} onChange={setSourceTitle} />
+            <Field
+              label="Page or passage location"
+              value={sourceLocation}
+              onChange={(value) => setSourceLocation(value.slice(0, 200))}
+            />
             <label className="mt-2 block text-sm">
               Source excerpt
               <textarea
@@ -385,10 +429,16 @@ export function EducationWorkbench({
                 setDraft({
                   sources: [
                     ...draft.sources,
-                    { id: nanoid(10), title: sourceTitle.trim(), text: sourceText.trim() },
+                    {
+                      id: nanoid(10),
+                      title: sourceTitle.trim(),
+                      text: sourceText.trim(),
+                      location: sourceLocation.trim(),
+                    },
                   ],
                 });
                 setSourceTitle('');
+                setSourceLocation('');
                 setSourceText('');
               }}
             >
@@ -397,7 +447,7 @@ export function EducationWorkbench({
             {draft.sources.map((source) => (
               <details key={source.id} className="mt-2 rounded border p-2">
                 <summary>
-                  {source.title} · {source.text.length} characters
+                  {source.title} · {source.location} · {source.text.length} characters
                 </summary>
                 <p className="my-2 max-h-40 overflow-auto whitespace-pre-wrap text-xs">
                   {source.text}
@@ -423,6 +473,11 @@ export function EducationWorkbench({
                 : 'Generate and save resource'}
           </Button>
         </fieldset>
+        {generationStage && (
+          <p role="status" className="text-sm">
+            {generationStage}
+          </p>
+        )}
         {busy && (
           <Button type="button" variant="outline" onClick={() => controller.current?.abort()}>
             Cancel generation
