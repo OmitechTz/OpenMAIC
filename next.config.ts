@@ -1,7 +1,23 @@
 import type { NextConfig } from 'next';
+import path from 'node:path';
+
+// Turbopack evaluates generated build helpers from the physical `.next`
+// location. When that directory is a junction on another drive, Node would
+// otherwise search for helper dependencies beside the external cache instead
+// of in this workspace.
+const workspaceNodeModules = path.join(process.cwd(), 'node_modules');
+const nodeSearchPaths = (process.env.NODE_PATH ?? '').split(path.delimiter).filter(Boolean);
+if (!nodeSearchPaths.includes(workspaceNodeModules)) {
+  process.env.NODE_PATH = [workspaceNodeModules, ...nodeSearchPaths].join(path.delimiter);
+}
 
 const nextConfig: NextConfig = {
   output: process.env.VERCEL ? undefined : 'standalone',
+  // Keep source resolution anchored to the application when the development
+  // build directory is relocated through a cross-drive junction.
+  turbopack: {
+    root: process.cwd(),
+  },
   outputFileTracingIncludes: {
     '/*': [
       'lib/server/agent-runtime/import-pptx-worker.mjs',

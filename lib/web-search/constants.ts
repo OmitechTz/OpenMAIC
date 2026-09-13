@@ -27,7 +27,7 @@ export const WEB_SEARCH_PROVIDERS: Record<WebSearchProviderId, WebSearchProvider
   brave: {
     id: 'brave',
     name: 'Brave Search',
-    requiresApiKey: false,
+    requiresApiKey: true,
     defaultBaseUrl: 'https://search.brave.com',
     endpointPath: '/search',
     icon: '/logos/brave.png',

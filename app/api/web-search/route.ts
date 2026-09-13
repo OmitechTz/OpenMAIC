@@ -57,10 +57,18 @@ export async function POST(req: NextRequest) {
     }
 
     const serverProviderId = resolveServerWebSearchProviderId() as WebSearchProviderId | undefined;
-    let providerId: WebSearchProviderId =
+    const providerIdFromRequest =
       requestProviderId && WEB_SEARCH_PROVIDERS[requestProviderId]
         ? requestProviderId
-        : (serverProviderId ?? 'tavily');
+        : undefined;
+    let providerId = providerIdFromRequest ?? serverProviderId;
+    if (!providerId) {
+      return apiError(
+        'MISSING_PROVIDER',
+        400,
+        'Automated web search is not configured. Generation can continue without web search.',
+      );
+    }
 
     // Prefer the operator's server-configured backend over stale client defaults
     // (e.g. Tavily without a key, or Brave HTML scrape with empty results).
@@ -181,8 +189,15 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     log.error(`Web search failed [query="${query?.substring(0, 60) ?? 'unknown'}"]:`, err);
-    const message = err instanceof Error ? err.message : 'Web search failed';
-    return apiError('INTERNAL_ERROR', 500, message);
+    const message = err instanceof Error ? err.message : '';
+    const rateLimited = /(?:\b429\b|rate.?limit|captcha|too many requests)/i.test(message);
+    return apiError(
+      rateLimited ? 'RATE_LIMITED' : 'UPSTREAM_ERROR',
+      rateLimited ? 429 : 502,
+      rateLimited
+        ? 'Web search is temporarily rate-limited. Generation can continue without web search or you can choose another configured provider.'
+        : 'Web search is temporarily unavailable. Generation can continue without web search.',
+    );
   }
 }
 

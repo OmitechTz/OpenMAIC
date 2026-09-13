@@ -68,30 +68,35 @@ describe('searchWithBrave', () => {
     proxyFetchMock.mockReset();
   });
 
-  it('uses Brave public search without an API key and clamps long queries', async () => {
+  it('requires an explicit API key and never scrapes the public search page', async () => {
+    await expect(searchWithBrave({ query: 'current topic' })).rejects.toThrow(
+      'Brave Search API key is not configured',
+    );
+    expect(proxyFetchMock).not.toHaveBeenCalled();
+  });
+
+  it('uses the Brave API with an API key and clamps long queries', async () => {
     proxyFetchMock.mockResolvedValueOnce(
-      new Response(
-        `
-          <div class="snippet" data-type="web">
-            <a href="https://example.com" class="l1"></a>
-            <div class="title search-snippet-title">Example</div>
-            <div class="generic-snippet">Content</div>
-          </div>
-        `,
-        { status: 200, headers: { 'content-type': 'text/html' } },
-      ),
+      new Response(JSON.stringify({ web: { results: [{ title: 'Example', url: 'https://example.com', description: 'Content' }] } }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
     );
 
     const result = await searchWithBrave({
       query: 'x'.repeat(500),
+      apiKey: 'configured-key',
       maxResults: 3,
     });
 
     const requestedUrl = new URL(proxyFetchMock.mock.calls[0][0]);
-    expect(requestedUrl.origin).toBe('https://search.brave.com');
-    expect(requestedUrl.pathname).toBe('/search');
+    expect(requestedUrl.origin).toBe('https://api.search.brave.com');
+    expect(requestedUrl.pathname).toBe('/res/v1/web/search');
     expect(requestedUrl.searchParams.get('q')).toHaveLength(400);
-    expect(proxyFetchMock.mock.calls[0][1]).toMatchObject({ method: 'GET' });
+    expect(proxyFetchMock.mock.calls[0][1]).toMatchObject({
+      method: 'GET',
+      headers: expect.objectContaining({ 'X-Subscription-Token': 'configured-key' }),
+    });
     expect(result.sources).toHaveLength(1);
     expect(result.query).toHaveLength(400);
   });

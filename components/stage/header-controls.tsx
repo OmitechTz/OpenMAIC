@@ -26,6 +26,7 @@ import { isVideoExportEnabled } from '@/lib/config/feature-flags';
 import { useVideoRenderStore } from '@/lib/store/video-render';
 import { CircularProgress } from '@/components/ui/circular-progress';
 import { VideoExportDialog } from './video-export-dialog';
+import { ClassroomGuideDialog } from './classroom-guide-dialog';
 import { LanguageSwitcher } from '../language-switcher';
 import { SettingsDialog } from '../settings';
 import {
@@ -114,6 +115,7 @@ export function HeaderControls({
 
   const compact = variant === 'compact';
   const proChecked = proModeActive ?? mode === 'edit';
+  const stageId = useStageStore((s) => s.stage?.id);
 
   if (!showGlobalControls && !showCourseActions) {
     return onToggleEditMode ? (
@@ -262,6 +264,10 @@ export function HeaderControls({
         </label>
       )}
 
+      {showCourseActions && (
+        <ClassroomGuideDialog stageId={stageId} ready={scenes.length > 0} compact={compact} />
+      )}
+
       {/* Export / Download — lives to the right of the Pro Switch.
           Not a settings function so it does not belong inside the
           settings pill; kept as a separate sibling sitting between the
@@ -307,7 +313,12 @@ export function HeaderControls({
             title={canExport ? undefined : t('export.mediaPending')}
           >
             <FileDown className="w-4 h-4 text-gray-400 shrink-0" />
-            <span>{t('export.pptx')}</span>
+            <div>
+              <div>{t('export.pptx')}</div>
+              <div className="text-[11px] text-gray-400 dark:text-gray-500">
+                {t('export.pptxDesc')}
+              </div>
+            </div>
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={!canExport}

@@ -494,26 +494,37 @@ function GenerationPreviewContent() {
           signal,
         });
 
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({ error: 'Web search failed' }));
-          throw new Error(data.error || t('generation.webSearchFailed'));
+        if (res.ok) {
+          const searchData = await res.json();
+          const sources = (searchData.sources || []).map((s: { title: string; url: string }) => ({
+            title: s.title,
+            url: s.url,
+          }));
+          setWebSearchSources(sources);
+
+          currentSession = {
+            ...currentSession,
+            researchContext: searchData.context || '',
+            researchSources: sources,
+          };
+        } else {
+          const data = await res.json().catch(() => ({}));
+          const warning =
+            typeof data.error === 'string' && data.error.length < 240
+              ? data.error
+              : 'Web search is unavailable. Generation continued without web search.';
+          setTruncationWarnings((current) =>
+            current.includes(warning) ? current : [...current, warning],
+          );
+          currentSession = {
+            ...currentSession,
+            requirements: { ...currentSession.requirements, webSearch: false },
+            researchContext: '',
+            researchSources: [],
+          };
         }
-
-        const searchData = await res.json();
-        const sources = (searchData.sources || []).map((s: { title: string; url: string }) => ({
-          title: s.title,
-          url: s.url,
-        }));
-        setWebSearchSources(sources);
-
-        const updatedSessionWithSearch = {
-          ...currentSession,
-          researchContext: searchData.context || '',
-          researchSources: sources,
-        };
-        setSession(updatedSessionWithSearch);
-        sessionStorage.setItem('generationSession', JSON.stringify(updatedSessionWithSearch));
-        currentSession = updatedSessionWithSearch;
+        setSession(currentSession);
+        sessionStorage.setItem('generationSession', JSON.stringify(currentSession));
         activeSteps = getActiveSteps(currentSession);
       }
 

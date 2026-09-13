@@ -933,6 +933,7 @@ function HomePage() {
               <div className="flex-1 min-w-0">
                 <GenerationToolbar
                   webSearch={form.webSearch}
+                  browserSearchQuery={form.requirement}
                   onWebSearchChange={(v) => updateForm('webSearch', v)}
                   onSettingsOpen={(section, providerId) => {
                     setSettingsSection(section);

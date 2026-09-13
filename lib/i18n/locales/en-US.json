@@ -55,6 +55,7 @@
   },
   "export": {
     "pptx": "Export PPTX",
+    "pptxDesc": "Editable slides + speaker notes (.pptx)",
     "resourcePack": "Export Resource Pack",
     "resourcePackDesc": "PPTX + interactive pages",
     "exporting": "Exporting...",
@@ -108,6 +109,28 @@
     "noSlides": "No slides to export",
     "noSlidesSkipped": "No slides in this course — PPTX skipped",
     "nothingToExport": "Nothing to export"
+  },
+  "classroomGuide": {
+    "open": "Open classroom teaching guide",
+    "guide": "Guide",
+    "title": "Your classroom is ready",
+    "description": "A practical guide for reviewing, presenting and sharing this lesson. Downloads unlock after every page and media item finishes generating.",
+    "prepareTitle": "Prepare",
+    "prepareDescription": "Review the page list and use Pro mode to correct wording, order, visuals and narration before class.",
+    "presentTitle": "Present",
+    "presentDescription": "Start in manual playback, enter fullscreen and advance only after learners have had time to respond.",
+    "engageTitle": "Engage",
+    "engageDescription": "Pause for predictions, run quizzes and activities, and use Chat or Whiteboard for follow-up explanations.",
+    "controlsTitle": "Teaching controls",
+    "controlPlayback": "Run or pause narration and teaching actions.",
+    "controlNavigation": "Move through the lesson at your own pace.",
+    "controlAutoplay": "Let the classroom advance automatically after you are comfortable with the lesson.",
+    "controlTeachingTools": "Ask an AI role a question or add your own explanation.",
+    "downloadsTitle": "Choose the right download",
+    "resourcePackDescription": "PPTX plus offline HTML copies of available interactive activities.",
+    "classroomZipDescription": "A complete classroom backup for later reimport, including course structure and assets.",
+    "interactivityNotice": "PowerPoint cannot retain live simulations or classroom interactions. Teach those in Learning Studio or use the Resource Pack.",
+    "startTeaching": "Start teaching"
   },
   "import": {
     "classroom": "Import Classroom",

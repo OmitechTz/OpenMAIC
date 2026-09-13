@@ -183,8 +183,11 @@ function WebSearchVisualizer({ sources }: { sources: Array<{ title: string; url:
               sources.slice(0, 4).map((source, i) => {
                 const isActive = i === activeResult;
                 return (
-                  <motion.div
+                  <motion.a
                     key={source.url}
+                    href={source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.08, duration: 0.25 }}
@@ -207,7 +210,7 @@ function WebSearchVisualizer({ sources }: { sources: Array<{ title: string; url:
                       <div className="h-0.5 flex-1 bg-slate-100 dark:bg-slate-700 rounded-full" />
                       <div className="h-0.5 w-1/3 bg-slate-100 dark:bg-slate-700 rounded-full" />
                     </div>
-                  </motion.div>
+                  </motion.a>
                 );
               })}
         </div>

@@ -8,6 +8,7 @@ export {
   loadSnippet,
   processConditionalBlocks,
   processSnippets,
+  resolveDefaultPromptsDir,
 } from './loader.js';
 
 export const PROMPT_IDS = {

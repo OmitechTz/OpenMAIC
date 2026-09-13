@@ -584,7 +584,7 @@ const getDefaultWebSearchConfig = () => ({
       apiKey: '',
       baseUrl: WEB_SEARCH_PROVIDERS.brave.defaultBaseUrl || '',
       enabled: true,
-      requiresApiKey: false,
+      requiresApiKey: true,
     },
     baidu: { apiKey: '', baseUrl: '', enabled: true, requiresApiKey: true },
     claude: {

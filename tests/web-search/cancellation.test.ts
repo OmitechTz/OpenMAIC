@@ -22,7 +22,7 @@ describe('registered Web Search provider cancellation', () => {
   it.each([
     ['tavily', (signal: AbortSignal) => searchWithTavily({ query: 'q', apiKey: 'k', signal })],
     ['bocha', (signal: AbortSignal) => searchWithBocha({ query: 'q', apiKey: 'k', signal })],
-    ['brave', (signal: AbortSignal) => searchWithBrave({ query: 'q', signal })],
+    ['brave', (signal: AbortSignal) => searchWithBrave({ query: 'q', apiKey: 'k', signal })],
     ['baidu', (signal: AbortSignal) => searchWithBaidu({ query: 'q', apiKey: 'k', signal })],
     ['minimax', (signal: AbortSignal) => searchWithMiniMax({ query: 'q', apiKey: 'k', signal })],
     ['doubao', (signal: AbortSignal) => searchWithDoubao({ query: 'q', apiKey: 'k', signal })],

@@ -538,7 +538,7 @@ function buildConfig(yamlData: YamlData): ServerConfig {
     image,
     video: loadEnvSection(VIDEO_ENV_MAP, yamlData.video),
     webSearch: loadEnvSection(WEB_SEARCH_ENV_MAP, yamlData['web-search'], {
-      keylessProviders: new Set(['brave', 'searxng']),
+      keylessProviders: new Set(['searxng']),
     }),
     disabled: collectDisabledProviders(yamlData),
   };

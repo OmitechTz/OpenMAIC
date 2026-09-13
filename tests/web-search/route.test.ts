@@ -139,19 +139,43 @@ describe('POST /api/web-search', () => {
     );
   });
 
-  it('runs Brave Search without an API key', async () => {
+  it('does not run Brave Search without an explicit API key', async () => {
     const res = await postWebSearch({
       query: 'test query',
       providerId: 'brave',
     });
 
-    expect(res.status).toBe(200);
-    expect(mocks.searchWeb).toHaveBeenCalledWith(
-      expect.objectContaining({
-        providerId: 'brave',
-        apiKey: '',
-      }),
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ errorCode: 'MISSING_API_KEY' });
+    expect(mocks.searchWeb).not.toHaveBeenCalled();
+  });
+
+  it('returns a clean error when no automated provider is configured or selected', async () => {
+    const res = await postWebSearch({ query: 'test query' });
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({
+      errorCode: 'MISSING_PROVIDER',
+      error: 'Automated web search is not configured. Generation can continue without web search.',
+    });
+  });
+
+  it('does not expose provider HTML when upstream search is rate-limited', async () => {
+    mocks.searchWeb.mockRejectedValueOnce(
+      new Error('Brave Search error (429): <!doctype html><html>captcha tokens</html>'),
     );
+
+    const res = await postWebSearch({
+      query: 'test query',
+      providerId: 'tavily',
+      apiKey: 'configured-client-key',
+    });
+    const data = await res.json();
+
+    expect(res.status).toBe(429);
+    expect(data).toMatchObject({ errorCode: 'RATE_LIMITED' });
+    expect(data.error).not.toContain('<html>');
+    expect(data.error).not.toContain('captcha tokens');
   });
 
   it('passes Baidu sub-source toggles through to the dispatcher', async () => {

@@ -94,14 +94,10 @@ describe('server web search config', () => {
     });
   });
 
-  it('resolves Brave classroom web search config without an API key', async () => {
+  it('does not resolve Brave classroom web search without an API key', async () => {
     const { resolveClassroomWebSearchConfig } = await import('@/lib/server/web-search-config');
 
-    expect(resolveClassroomWebSearchConfig({ webSearchProviderId: 'brave' })).toEqual({
-      providerId: 'brave',
-      apiKey: '',
-      baseUrl: undefined,
-    });
+    expect(resolveClassroomWebSearchConfig({ webSearchProviderId: 'brave' })).toBeUndefined();
   });
 
   it('resolves MiniMax classroom web search config from dedicated server env vars', async () => {

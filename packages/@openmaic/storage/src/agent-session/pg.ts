@@ -6,8 +6,6 @@
  * complete callback. READ COMMITTED isolation is assumed by the parent-row
  * lock followed by max-plus-one child allocation used by both append logs.
  */
-import { randomUUID } from 'node:crypto';
-
 import { splitSqlStatements } from '../document/pg.js';
 import type { Queryable, WithTransaction } from '../runtime/pg.js';
 import {
@@ -444,7 +442,7 @@ export class PgAgentSessionStore
       ({
         error: (message, context, error) => console.error(message, context, error),
       } satisfies AgentSessionLogger);
-    this.createId = options.createId ?? randomUUID;
+    this.createId = options.createId ?? (() => globalThis.crypto.randomUUID());
     this.clock = options.now ?? Date.now;
     this.resolveOwnerHook = options.resolveFinalOwner ?? (async (_tx, ownerId) => ownerId);
     this.createdHook = options.onSessionCreated;
@@ -1702,9 +1700,9 @@ class PgAgentSessionEntryTreeHandle implements AgentSessionEntryTreeHandle {
 
   async createEntryId(): Promise<string> {
     for (let index = 0; index < 100; index += 1) {
-      const id = randomUUID().slice(0, 8);
+      const id = globalThis.crypto.randomUUID().slice(0, 8);
       if (!this.byId.has(id)) return id;
     }
-    return randomUUID();
+    return globalThis.crypto.randomUUID();
   }
 }

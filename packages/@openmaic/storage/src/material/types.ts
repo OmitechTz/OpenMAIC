@@ -13,13 +13,14 @@
  * the asset registry; the lifecycle only coordinates which worker may turn a
  * source asset into a text-bearing derivative.
  */
-import { randomBytes } from 'node:crypto';
-
 const CROCKFORD_BASE32 = '0123456789abcdefghjkmnpqrstvwxyz';
 
 /** Allocate a private material id from 128 random bits. */
 export function createMaterialId(): string {
-  const bytes = randomBytes(16);
+  // Web Crypto is available in supported browsers and Node 20+. Keeping this
+  // browser-safe module free of `node:crypto` prevents client bundles that use
+  // the storage package root from pulling a Node-only scheme into Webpack.
+  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
   let bits = 0;
   let value = 0;
   let encoded = '';

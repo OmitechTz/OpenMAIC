@@ -64,23 +64,22 @@ describe('web search provider constants', () => {
         baseUrl: 'http://192.168.161.100:6060',
         requiresApiKey: false,
       },
-      brave: { apiKey: '', requiresApiKey: false },
+      brave: { apiKey: '', requiresApiKey: true },
     });
 
     expect(order).not.toContain('searxng');
-    expect(order).toContain('brave');
+    expect(order).not.toContain('brave');
   });
 
   it('prioritizes server-managed web search providers in fallback order', () => {
     const order = buildWebSearchFallbackOrder({
       tavily: { apiKey: '', requiresApiKey: true },
-      brave: { apiKey: '', baseUrl: 'https://search.brave.com', requiresApiKey: false },
+      brave: { apiKey: '', baseUrl: 'https://search.brave.com', requiresApiKey: true },
       searxng: { apiKey: '', baseUrl: '', requiresApiKey: false, isServerConfigured: true },
     });
 
     expect(order[0]).toBe('searxng');
-    expect(order).toContain('brave');
-    expect(order.indexOf('searxng')).toBeLessThan(order.indexOf('brave'));
+    expect(order).not.toContain('brave');
   });
 
   it('never treats a server-disabled provider as configured or a fallback', () => {

@@ -1,34 +1,14 @@
 /**
  * Brave Web Search integration.
  *
- * Supports two modes:
- * - **API mode** (preferred): Uses the official Brave Search API with an API key.
- *   Returns structured JSON results with rich metadata.
- * - **Scrape mode** (fallback): Fetches the public HTML search page and extracts
- *   web result snippets via regex. No API key needed but subject to rate-limiting.
+ * Uses the official Brave Search API with an explicitly configured API key.
+ * Public-result-page scraping is intentionally not used: it is unreliable,
+ * triggers bot challenges, and previously exposed raw CAPTCHA HTML to users.
  */
 
 import { proxyFetch } from '@/lib/server/proxy-fetch';
 import type { WebSearchResult, WebSearchSource } from '@/lib/types/web-search';
 import { normalizeWebSearchQuery } from './utils';
-
-const BRAVE_DEFAULT_BASE_URL = 'https://search.brave.com';
-
-const BRAVE_HEADERS: Record<string, string> = {
-  'User-Agent':
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
-  Accept:
-    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-  'Accept-Language': 'en-US,en;q=0.9',
-};
-
-function buildBraveSearchUrl(query: string, baseUrl?: string): string {
-  const trimmed = (baseUrl || BRAVE_DEFAULT_BASE_URL).replace(/\/+$/, '');
-  const endpoint = trimmed.endsWith('/search') ? trimmed : `${trimmed}/search`;
-  const url = new URL(endpoint);
-  url.searchParams.set('q', query);
-  return url.toString();
-}
 
 function decodeHtml(value: string): string {
   return value
@@ -156,30 +136,6 @@ async function searchWithBraveApi(
     }));
 }
 
-/**
- * Fallback: scrape the public Brave Search HTML page (no API key needed).
- */
-async function searchWithBraveScrape(
-  query: string,
-  maxResults: number,
-  baseUrl?: string,
-  signal?: AbortSignal,
-): Promise<WebSearchSource[]> {
-  const res = await proxyFetch(buildBraveSearchUrl(query, baseUrl), {
-    method: 'GET',
-    headers: BRAVE_HEADERS,
-    ...(signal ? { signal } : {}),
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text().catch(() => '');
-    throw new Error(`Brave Search error (${res.status}): ${errorText || res.statusText}`);
-  }
-
-  const html = await res.text();
-  return parseBraveSearchHtml(html, maxResults);
-}
-
 export async function searchWithBrave(params: {
   query: string;
   apiKey?: string;
@@ -187,13 +143,14 @@ export async function searchWithBrave(params: {
   baseUrl?: string;
   signal?: AbortSignal;
 }): Promise<WebSearchResult> {
-  const { query: rawQuery, apiKey, maxResults = 5, baseUrl, signal } = params;
+  const { query: rawQuery, apiKey, maxResults = 5, signal } = params;
   const query = normalizeWebSearchQuery(rawQuery);
   const startedAt = Date.now();
 
-  const sources = apiKey
-    ? await searchWithBraveApi(query, apiKey, maxResults, signal)
-    : await searchWithBraveScrape(query, maxResults, baseUrl, signal);
+  if (!apiKey?.trim()) {
+    throw new Error('Brave Search API key is not configured');
+  }
+  const sources = await searchWithBraveApi(query, apiKey, maxResults, signal);
 
   return {
     answer: '',

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useMemo, useEffect } from 'react';
-import { Bot, Brain, Check, Paperclip, FileText, X, Globe2, Search } from 'lucide-react';
+import { Bot, Brain, Check, Paperclip, FileText, X, Globe2, Search, ExternalLink } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
@@ -48,6 +48,13 @@ import {
 import { dedupeCourseMaterialFiles } from '@/lib/document/course-materials';
 import type { SelectedCourseMaterial } from '@/lib/types/generation';
 import { findModelById, modelIdsMatch } from '@/lib/ai/model-aliases';
+import {
+  BROWSER_SEARCH_ENGINES,
+  getPreferredBrowserSearchEngine,
+  openBrowserSearch,
+  setPreferredBrowserSearchEngine,
+  type BrowserSearchEngineId,
+} from '@/lib/web-search/browser-search';
 
 // ─── Constants ───────────────────────────────────────────────
 const MAX_COURSE_MATERIAL_SIZE_MB = 50;
@@ -56,6 +63,7 @@ const MAX_COURSE_MATERIAL_SIZE_BYTES = MAX_COURSE_MATERIAL_SIZE_MB * 1024 * 1024
 // ─── Types ───────────────────────────────────────────────────
 export interface GenerationToolbarProps {
   webSearch: boolean;
+  browserSearchQuery?: string;
   onWebSearchChange: (v: boolean) => void;
   onSettingsOpen: (section?: SettingsSection, providerId?: ProviderId) => void;
   // PDF
@@ -76,6 +84,7 @@ export interface GenerationToolbarProps {
 // ─── Component ───────────────────────────────────────────────
 export function GenerationToolbar({
   webSearch,
+  browserSearchQuery = '',
   onWebSearchChange,
   onSettingsOpen,
   courseMaterials,
@@ -99,9 +108,12 @@ export function GenerationToolbar({
   const setWebSearchProvider = useSettingsStore((s) => s.setWebSearchProvider);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [browserSearchEngine, setBrowserSearchEngine] = useState<BrowserSearchEngineId>(() =>
+    getPreferredBrowserSearchEngine(),
+  );
 
-  // Check web search availability. Keyless providers such as Brave should keep
-  // the toolbar reachable even when the current API-key provider is not ready.
+  // Automated generation search is available only through an explicitly
+  // configured API-backed provider (or operator-managed SearXNG).
   const webSearchProvider = WEB_SEARCH_PROVIDERS[webSearchProviderId];
   const webSearchConfig = webSearchProvidersConfig[webSearchProviderId];
   const selectedWebSearchAvailable = webSearchProvider
@@ -431,8 +443,7 @@ export function GenerationToolbar({
         </Popover>
 
         {/* ── Web Search ── */}
-        {webSearchAvailable ? (
-          <Popover>
+        <Popover>
             <PopoverTrigger asChild>
               <button className={webSearch ? pillActive : pillMuted}>
                 <Globe2 className={cn('size-3.5', webSearch && 'animate-pulse')} />
@@ -446,6 +457,55 @@ export function GenerationToolbar({
               </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-64 p-3 space-y-3">
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => openBrowserSearch(browserSearchQuery, browserSearchEngine)}
+                  disabled={!browserSearchQuery.trim()}
+                  className="w-full flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-all hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ExternalLink className="size-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium">Search in browser</p>
+                    <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                      Opens in the browser you are currently using
+                    </p>
+                  </div>
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground shrink-0">
+                    Browser engine
+                  </span>
+                  <Select
+                    value={browserSearchEngine}
+                    onValueChange={(value) => {
+                      const engine = value as BrowserSearchEngineId;
+                      setBrowserSearchEngine(engine);
+                      setPreferredBrowserSearchEngine(engine);
+                    }}
+                  >
+                    <SelectTrigger className="h-7 text-xs flex-1 min-w-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(BROWSER_SEARCH_ENGINES).map(([id, engine]) => (
+                        <SelectItem key={id} value={id}>
+                          {engine.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="border-t pt-3">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Search during generation
+                </p>
+              </div>
+
+              {webSearchAvailable ? (
+                <>
               {/* Toggle */}
               <button
                 onClick={() => {
@@ -512,21 +572,21 @@ export function GenerationToolbar({
                   </SelectContent>
                 </Select>
               </div>
+                </>
+              ) : (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                  Automated web search is off because no search API is configured. Generation will continue without it.
+                  <button
+                    type="button"
+                    onClick={() => onSettingsOpen('web-search')}
+                    className="mt-2 block font-medium underline underline-offset-2"
+                  >
+                    Configure search provider
+                  </button>
+                </div>
+              )}
             </PopoverContent>
           </Popover>
-        ) : (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                className={cn(pillCls, 'text-muted-foreground/40 cursor-not-allowed')}
-                disabled
-              >
-                <Globe2 className="size-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{t('toolbar.webSearchNoProvider')}</TooltipContent>
-          </Tooltip>
-        )}
 
         {/* ── Separator ── */}
         <div className="w-px h-4 bg-border/60 mx-1" />

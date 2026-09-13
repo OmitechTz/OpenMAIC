@@ -1,5 +1,6 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { describe, expect, test } from 'vitest';
 import {
@@ -9,7 +10,10 @@ import {
   loadPrompt,
   processConditionalBlocks,
   processSnippets,
+  resolveDefaultPromptsDir,
 } from '@openmaic/generation';
+
+const PACKAGE_ROOT = fileURLToPath(new URL('../', import.meta.url));
 
 function createPromptsFixture(): string {
   const promptsDir = mkdtempSync(join(tmpdir(), 'openmaic-generation-prompts-'));
@@ -19,6 +23,13 @@ function createPromptsFixture(): string {
 }
 
 describe('loader semantics', () => {
+  test('finds package prompt assets when an app bundler relocates the loader module', () => {
+    const applicationRoot = resolve(PACKAGE_ROOT, '../../..');
+    expect(resolveDefaultPromptsDir('C:/temporary/bundler/cache', applicationRoot)).toBe(
+      PACKAGE_ROOT.replace(/[\\/]$/, ''),
+    );
+  });
+
   test('loads and interpolates a known prompt', () => {
     const result = buildPrompt(PROMPT_IDS.SLIDE_ACTIONS, {
       title: 'Test Slide',

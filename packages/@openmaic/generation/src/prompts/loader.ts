@@ -2,15 +2,37 @@
  * Prompt loader for packaged Markdown templates and snippets.
  */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { LoadedPrompt, PromptId, PromptVariableDefaults, SnippetId } from './types.js';
 
 // `src/prompts` and `dist/prompts` have the same depth below the package root.
-// Resolve from this module's URL via path operations so app bundlers do not
-// mistake the Markdown directory for a statically imported module asset.
-const DEFAULT_PROMPTS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+// Next/Turbopack may bundle this module into its cache, however, so import.meta.url
+// alone is not sufficient. Prefer the module-relative package in normal Node use,
+// then locate the workspace/package from the application's working directory.
+const MODULE_RELATIVE_PROMPTS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+
+function containsPromptAssets(directory: string): boolean {
+  return existsSync(join(directory, 'templates', 'requirements-to-outlines', 'system.md'));
+}
+
+export function resolveDefaultPromptsDir(
+  moduleRelativeDir: string = MODULE_RELATIVE_PROMPTS_DIR,
+  workingDirectory: string = process.cwd(),
+  configuredDirectory: string | undefined = process.env.OPENMAIC_GENERATION_PROMPTS_DIR,
+): string {
+  const candidates = [
+    configuredDirectory?.trim(),
+    moduleRelativeDir,
+    resolve(workingDirectory, 'packages', '@openmaic', 'generation'),
+    resolve(workingDirectory, 'node_modules', '@openmaic', 'generation'),
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  return candidates.find(containsPromptAssets) ?? moduleRelativeDir;
+}
+
+const DEFAULT_PROMPTS_DIR = resolveDefaultPromptsDir();
 
 const PROMPT_VARIABLE_DEFAULTS = {
   'pbl-actions': {

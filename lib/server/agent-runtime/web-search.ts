@@ -22,11 +22,8 @@ export interface WebSearchCapability {
 
 /** This deployment's web-search capability, or null when unconfigured. */
 export function resolveWebSearchCapability(): WebSearchCapability | null {
-  // The resolver's own per-provider rules decide usability — including
-  // keyless providers (brave/searxng carry no apiKey by definition) and the
-  // capability force-off plumbing (a disabled-only config resolves to nothing).
-  // An extra non-empty-key check here would silently unregister web_search on
-  // exactly the keyless deployments.
+  // The resolver's own per-provider rules decide usability, including the
+  // operator-managed keyless SearXNG option and capability force-off plumbing.
   const config = resolveClassroomWebSearchConfig({});
   if (!config) return null;
   return {
