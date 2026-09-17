@@ -100,6 +100,8 @@ export interface SemesterSource {
   year: string;
   url: string;
   reference: string;
+  text: string;
+  location: string;
 }
 export interface SemesterWorkspace {
   version: number;
@@ -122,7 +124,56 @@ export interface SemesterWorkspace {
     include_worked_examples: boolean;
     include_software_demo: boolean;
     lecturer_answers_only: boolean;
+    enforce_dmi_master: boolean;
+    primary_colour: string;
+    accent_colour: string;
+    heading_font: string;
+    body_font: string;
+    footer_text: string;
   };
+  syllabus_text: string;
+  student_edition: boolean;
+  lecturer_edition: boolean;
+  accessible_edition: boolean;
+  notification_days_before: number;
+  retention_months: number;
+  storage_quota_mb: number;
+}
+
+export interface Gradebook {
+  items: {
+    id: number;
+    title: string;
+    category: string;
+    maximum_score: number;
+    weight_percent: number;
+    published: boolean;
+    due_at: string | null;
+  }[];
+  grades: {
+    id: number;
+    grade_item_id: number;
+    user_id: number;
+    name: string;
+    score: number | null;
+    feedback: string;
+  }[];
+  weight_total: number;
+}
+
+export interface MaterialMatrix {
+  complete: number;
+  rows: {
+    week: number;
+    title: string;
+    status: string;
+    planned: string[];
+    source_count: number;
+    source_excerpt_count: number;
+    lesson_ready: boolean;
+    assignment_ready: boolean;
+    missing: string[];
+  }[];
 }
 export interface Announcement {
   id: number;

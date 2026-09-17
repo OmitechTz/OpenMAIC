@@ -20,6 +20,8 @@ import { useLearningResourcesStore } from '@/lib/store/learning-resources';
 import { useSettingsStore } from '@/lib/store/settings';
 import { isLLMProviderConfigured } from '@/lib/store/settings-validation';
 import { getCurrentModelConfig } from '@/lib/utils/model-config';
+import { AcademicOperations } from './academic-operations';
+import { downloadDmiPresentationTemplate } from '@/lib/education/dmi-presentation-template';
 
 const field = 'block w-full rounded-lg border bg-background p-2 text-sm';
 const MATERIALS: { id: SemesterMaterial; label: string }[] = [
@@ -40,6 +42,27 @@ const escapeHtml = (value: unknown) =>
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;');
+
+function groundedSources(
+  workspace: SemesterWorkspace,
+  sourceIds: string[],
+): { id: string; title: string; text: string; location: string }[] {
+  let remaining = 60000;
+  return workspace.sources
+    .filter((source) => sourceIds.includes(source.id) && source.text.trim())
+    .slice(0, 10)
+    .map((source) => {
+      const text = source.text.slice(0, remaining);
+      remaining -= text.length;
+      return {
+        id: source.id,
+        title: source.title,
+        text,
+        location: source.location || source.reference,
+      };
+    })
+    .filter((source) => source.text.length > 0);
+}
 
 function offlineSemesterGuide(
   course: ManagedCourse,
@@ -289,6 +312,8 @@ export function SemesterOperations({
   const [sourceYear, setSourceYear] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [sourceReference, setSourceReference] = useState('');
+  const [sourceText, setSourceText] = useState('');
+  const [sourceLocation, setSourceLocation] = useState('');
   const [copyName, setCopyName] = useState(`${course.name} — next semester`);
   const [copyTerm, setCopyTerm] = useState('');
   const [copyAcademicYear, setCopyAcademicYear] = useState('');
@@ -346,6 +371,9 @@ export function SemesterOperations({
     return [
       `Create ${p.slide_count} editable ${p.aspect_ratio === 'wide' ? '16:9' : '4:3'} slides for approximately ${p.duration_minutes} minutes.`,
       `Use the ${p.theme} visual theme; show course ${course.code || course.name}, semester ${workspace.semester || course.term || ''}, academic year ${workspace.academic_year}, and lecturer ${p.lecturer_name || 'name to be confirmed'}.`,
+      p.enforce_dmi_master
+        ? `Enforce the DMI master on every slide: ${p.primary_colour} primary and ${p.accent_colour} accent colours, ${p.heading_font} headings, ${p.body_font} body text, and footer “${p.footer_text}”. Keep title, section, content, activity, worked-example and closing layouts consistent.`
+        : '',
       p.include_speaker_notes ? 'Add delivery-ready speaker notes to every teaching slide.' : '',
       p.include_worked_examples
         ? 'Include checked worked examples with symbols, assumptions, units, and intermediate steps.'
@@ -357,6 +385,15 @@ export function SemesterOperations({
       p.lecturer_answers_only
         ? 'Keep answers and marking guidance in lecturer-only speaker notes.'
         : '',
+      workspace.lecturer_edition
+        ? 'Prepare a lecturer edition with delivery notes and marking guidance.'
+        : '',
+      workspace.student_edition
+        ? 'Prepare a student edition with all answer keys and private notes removed.'
+        : '',
+      workspace.accessible_edition
+        ? 'Prepare an accessible edition with descriptive labels, readable contrast, logical reading order and plain-language alternatives for visual information.'
+        : '',
       'Use labelled technical diagrams where they improve understanding. Do not invent references, equations, software output, equipment limits, or experimental results.',
     ]
       .filter(Boolean)
@@ -367,6 +404,7 @@ export function SemesterOperations({
     week: SemesterWorkspace['weeks'][number],
     target: 'presentation' | 'lesson-pack',
   ) => {
+    const citedSources = workspace ? groundedSources(workspace, week.source_ids) : [];
     useEducationStudioStore.getState().setMode('teacher');
     const resources = useLearningResourcesStore.getState();
     resources.setDraft({
@@ -383,6 +421,7 @@ export function SemesterOperations({
       ]
         .filter(Boolean)
         .join('\n'),
+      sources: citedSources,
     });
     resources.setComposer({
       mode: 'teacher',
@@ -391,7 +430,7 @@ export function SemesterOperations({
       instruction:
         target === 'presentation'
           ? presentationInstruction
-          : 'Create separate lecturer guidance and student-facing material. Include activities, technical visuals, checked examples, a quiz, an assignment, and lecturer-only answers.',
+          : `Create ${workspace?.lecturer_edition ? 'a lecturer edition with guidance and answers' : ''}${workspace?.lecturer_edition && workspace?.student_edition ? ' and ' : ''}${workspace?.student_edition ? 'a student edition without answers' : ''}. ${workspace?.accessible_edition ? 'Include an accessible edition with descriptive labels and a logical reading order.' : ''} Include activities, technical visuals, checked examples, a quiz, an assignment, and clearly separated lecturer-only answers.`,
     });
     window.dispatchEvent(new Event('omitech:open-education-create'));
   };
@@ -411,6 +450,7 @@ export function SemesterOperations({
     try {
       for (let index = 0; index < semester.weeks.length; index += 1) {
         const week = semester.weeks[index];
+        const citedSources = groundedSources(semester, week.source_ids);
         setBatchProgress(
           `Generating draft ${index + 1} of ${semester.weeks.length}: Week ${week.week}`,
         );
@@ -434,7 +474,7 @@ export function SemesterOperations({
           classSize: 30,
           examDate: '',
           questionCount: 8,
-          sources: [],
+          sources: citedSources,
         });
         const response = await fetch('/api/education/generate', {
           method: 'POST',
@@ -940,6 +980,47 @@ export function SemesterOperations({
                 }
               />
             </label>
+            <label>
+              Primary colour
+              <input
+                className={field}
+                type="color"
+                value={workspace.presentation.primary_colour}
+                onChange={(e) =>
+                  setWorkspace({
+                    ...workspace,
+                    presentation: { ...workspace.presentation, primary_colour: e.target.value },
+                  })
+                }
+              />
+            </label>
+            <label>
+              Accent colour
+              <input
+                className={field}
+                type="color"
+                value={workspace.presentation.accent_colour}
+                onChange={(e) =>
+                  setWorkspace({
+                    ...workspace,
+                    presentation: { ...workspace.presentation, accent_colour: e.target.value },
+                  })
+                }
+              />
+            </label>
+            <label>
+              Footer text
+              <input
+                className={field}
+                value={workspace.presentation.footer_text}
+                onChange={(e) =>
+                  setWorkspace({
+                    ...workspace,
+                    presentation: { ...workspace.presentation, footer_text: e.target.value },
+                  })
+                }
+              />
+            </label>
           </div>
           <div className="mt-3 flex flex-wrap gap-3">
             {(
@@ -949,6 +1030,7 @@ export function SemesterOperations({
                 'include_worked_examples',
                 'include_software_demo',
                 'lecturer_answers_only',
+                'enforce_dmi_master',
               ] as const
             ).map((key) => (
               <label className="text-xs" key={key}>
@@ -971,6 +1053,77 @@ export function SemesterOperations({
             units, real references, software inputs/outputs, speaker notes and separated lecturer
             answers.
           </p>
+          <Button
+            className="mt-3"
+            variant="outline"
+            onClick={() =>
+              void downloadDmiPresentationTemplate({
+                courseCode: course.code || '',
+                courseName: course.subject || course.name,
+                semester: workspace.semester || course.term || '',
+                academicYear: workspace.academic_year,
+                lecturer: workspace.presentation.lecturer_name,
+                primary: workspace.presentation.primary_colour,
+                accent: workspace.presentation.accent_colour,
+                headingFont: workspace.presentation.heading_font,
+                bodyFont: workspace.presentation.body_font,
+                footer: workspace.presentation.footer_text,
+              }).catch((cause: Error) => setError(cause.message))
+            }
+          >
+            Download editable DMI master PPTX
+          </Button>
+          <div className="mt-3 grid gap-2 md:grid-cols-3">
+            {(['lecturer_edition', 'student_edition', 'accessible_edition'] as const).map((key) => (
+              <label className="text-xs" key={key}>
+                <input
+                  type="checkbox"
+                  checked={workspace[key]}
+                  onChange={(e) => setWorkspace({ ...workspace, [key]: e.target.checked })}
+                />{' '}
+                {key.replaceAll('_', ' ')}
+              </label>
+            ))}
+            <label>
+              Notify before deadlines (days)
+              <input
+                className={field}
+                type="number"
+                min={0}
+                max={30}
+                value={workspace.notification_days_before}
+                onChange={(e) =>
+                  setWorkspace({ ...workspace, notification_days_before: Number(e.target.value) })
+                }
+              />
+            </label>
+            <label>
+              Retention (months)
+              <input
+                className={field}
+                type="number"
+                min={1}
+                max={120}
+                value={workspace.retention_months}
+                onChange={(e) =>
+                  setWorkspace({ ...workspace, retention_months: Number(e.target.value) })
+                }
+              />
+            </label>
+            <label>
+              Storage quota (MB)
+              <input
+                className={field}
+                type="number"
+                min={100}
+                max={102400}
+                value={workspace.storage_quota_mb}
+                onChange={(e) =>
+                  setWorkspace({ ...workspace, storage_quota_mb: Number(e.target.value) })
+                }
+              />
+            </label>
+          </div>
         </details>
       )}
 
@@ -992,6 +1145,8 @@ export function SemesterOperations({
                     year: sourceYear,
                     url: sourceUrl,
                     reference: sourceReference,
+                    text: sourceText,
+                    location: sourceLocation,
                   },
                 ],
               });
@@ -1000,6 +1155,8 @@ export function SemesterOperations({
               setSourceYear('');
               setSourceUrl('');
               setSourceReference('');
+              setSourceText('');
+              setSourceLocation('');
             }}
           >
             <label>
@@ -1044,6 +1201,24 @@ export function SemesterOperations({
                 onChange={(e) => setSourceReference(e.target.value)}
               />
             </label>
+            <label>
+              Section or page
+              <input
+                className={field}
+                value={sourceLocation}
+                onChange={(e) => setSourceLocation(e.target.value)}
+              />
+            </label>
+            <label className="md:col-span-3">
+              Approved source excerpt for grounded generation
+              <textarea
+                className={field}
+                rows={5}
+                maxLength={20000}
+                value={sourceText}
+                onChange={(e) => setSourceText(e.target.value)}
+              />
+            </label>
             <Button className="self-end">Add source</Button>
           </form>
           {workspace.sources.map((source) => (
@@ -1053,6 +1228,8 @@ export function SemesterOperations({
                 {source.author && ` · ${source.author}`}
                 {source.year && ` (${source.year})`}
                 {source.reference && ` · ${source.reference}`}
+                {source.location && ` · ${source.location}`}
+                {source.text && ` · ${source.text.length} source characters`}
                 {source.url && (
                   <>
                     {' · '}
@@ -1377,6 +1554,8 @@ export function SemesterOperations({
           ))}
         </details>
       )}
+
+      <AcademicOperations course={course} members={members} onSemesterImported={load} />
 
       {edit && members.some((member) => member.role === 'student') && (
         <details className="rounded-lg border p-3">
