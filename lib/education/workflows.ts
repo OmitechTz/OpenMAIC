@@ -83,10 +83,10 @@ export const EDUCATION_WORKFLOWS: Record<
       'Turn the course expectations into a clear study roadmap with weekly goals, preparation tasks, checkpoints, and revision milestones.',
   },
   'lecture-slides': {
-    title: 'Create lecture slides',
-    description: 'Slides, speaker notes, examples, and discussion prompts.',
+    title: 'Create a complete PowerPoint',
+    description: 'A full editable PPTX with teaching slides, visuals, examples, and speaker notes.',
     teacherInstruction:
-      'Create a presentation-ready lecture with a strong opening, concise slides, speaker notes, worked examples, visual suggestions, discussion questions, a recap, and a short knowledge check.',
+      'Create a complete presentation-ready lecture deck, not an outline. Include a title slide, learning objectives, a coherent teaching sequence, concise slide content, relevant diagrams or visual explanations, worked examples, software demonstrations where relevant, discussion questions, a recap, and a short knowledge check. Add substantial speaker notes to every teaching slide so the exported PPTX can be delivered without a separate script. Keep answers to the knowledge check in speaker notes or clearly separated teacher guidance.',
     studentInstruction:
       'Create a concise visual study presentation that explains the topic, shows worked examples, highlights common errors, and ends with retrieval-practice questions.',
   },

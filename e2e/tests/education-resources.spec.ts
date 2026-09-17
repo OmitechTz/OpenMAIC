@@ -140,12 +140,13 @@ test('pasted brief recovers missing AI connection and subject templates fill the
   for (const subject of [
     'Artificial Intelligence',
     'Industrial Automation',
-    'Machine Maintenance',
+    'Engineering Maintenance',
+    'Fluid Mechanics',
   ]) {
     const card = page
       .getByRole('article')
       .filter({ has: page.getByRole('heading', { name: subject, exact: true }) });
-    await card.getByRole('button', { name: 'Use lesson template' }).click();
+    await card.getByRole('button', { name: 'Prepare materials' }).click();
     await expect(briefForm.getByLabel('Topic or learning question')).toHaveValue(
       new RegExp(subject),
     );

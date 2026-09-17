@@ -8,6 +8,15 @@ import { TEACHING_TEMPLATES, teachingTemplateBrief } from '@/lib/education/teach
 import { briefSchema } from '@/lib/education/artifacts';
 
 describe('teaching subject templates', () => {
+  it('contains the four configured DMI semester subjects', () => {
+    expect(TEACHING_TEMPLATES.map(({ code, title }) => ({ code, title }))).toEqual([
+      { code: 'MEU 07571', title: 'Artificial Intelligence' },
+      { code: 'MEU 07569', title: 'Industrial Automation' },
+      { code: 'MEU 08130', title: 'Engineering Maintenance' },
+      { code: 'OGU 07538', title: 'Fluid Mechanics' },
+    ]);
+  });
+
   it.each(TEACHING_TEMPLATES)(
     'prepares valid lesson and syllabus briefs for $title',
     (template) => {
@@ -21,6 +30,12 @@ describe('teaching subject templates', () => {
       }
     },
   );
+
+  it.each(TEACHING_TEMPLATES)('provides a full PowerPoint instruction for $title', (template) => {
+    expect(template.presentationInstruction).toContain('complete semester lecture deck');
+    expect(template.presentationInstruction).toContain('speaker notes');
+    expect(template.software.length).toBeGreaterThan(0);
+  });
 });
 
 describe('classroom export boundaries', () => {

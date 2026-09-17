@@ -40,6 +40,7 @@ import {
   type AssessmentOptions,
   type EducationWorkflowId,
 } from '@/lib/education/workflows';
+import { TEACHING_TEMPLATES } from '@/lib/education/teaching-templates';
 import { navigateOmitechParent } from '@/lib/omitech/parent-navigation';
 import {
   type EducationIntegrationId,
@@ -202,11 +203,10 @@ function CourseDialog({ onClose }: { onClose: () => void }) {
               Course workspace
             </p>
             <h2 id="new-course-title" className="mt-1 text-xl font-semibold">
-              Create a personal collection
+              Create a semester course
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Organize private authoring resources. Use Classes and assignments to teach enrolled
-              students.
+              Organize notes, presentations, software activities and assignments for one semester.
             </p>
           </div>
           <button
@@ -218,6 +218,28 @@ function CourseDialog({ onClose }: { onClose: () => void }) {
             <X className="size-4" />
           </button>
         </div>
+        <div className="mt-5">
+          <p className="text-xs font-medium">Start with a teaching subject</p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {TEACHING_TEMPLATES.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => {
+                  setName(template.title);
+                  setCode(template.code);
+                  setSubject(template.title);
+                  setLevel('undergraduate');
+                  setAudience(`${template.programme} ${template.year} students`);
+                }}
+                className="rounded-xl border border-border px-3 py-2 text-left text-xs transition hover:border-primary/40 hover:bg-primary/5"
+              >
+                <span className="font-semibold">{template.code}</span>
+                <span className="text-muted-foreground"> · {template.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <label className="text-xs font-medium sm:col-span-2">
             Course name
@@ -225,7 +247,7 @@ function CourseDialog({ onClose }: { onClose: () => void }) {
               autoFocus
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Introduction to Economics"
+              placeholder="Industrial Automation"
               className="mt-1.5 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
             />
           </label>
@@ -234,7 +256,7 @@ function CourseDialog({ onClose }: { onClose: () => void }) {
             <input
               value={code}
               onChange={(event) => setCode(event.target.value)}
-              placeholder="ECO 101"
+              placeholder="MEU 07569"
               className="mt-1.5 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
             />
           </label>
@@ -243,7 +265,7 @@ function CourseDialog({ onClose }: { onClose: () => void }) {
             <input
               value={subject}
               onChange={(event) => setSubject(event.target.value)}
-              placeholder="Economics"
+              placeholder="Industrial Automation"
               className="mt-1.5 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
             />
           </label>
@@ -262,11 +284,11 @@ function CourseDialog({ onClose }: { onClose: () => void }) {
             </select>
           </label>
           <label className="text-xs font-medium">
-            Academic term
+            Semester / academic year
             <input
               value={term}
               onChange={(event) => setTerm(event.target.value)}
-              placeholder="Semester 1 · 2026"
+              placeholder="Semester 1 · 2026/2027"
               className="mt-1.5 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
             />
           </label>
@@ -275,7 +297,7 @@ function CourseDialog({ onClose }: { onClose: () => void }) {
             <input
               value={audience}
               onChange={(event) => setAudience(event.target.value)}
-              placeholder="First-year students; mixed prior knowledge"
+              placeholder="BMTE Year 3 students"
               className="mt-1.5 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
             />
           </label>
@@ -294,7 +316,7 @@ function CourseDialog({ onClose }: { onClose: () => void }) {
             disabled={!name.trim()}
             className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40"
           >
-            Create collection
+            Create semester course
           </button>
         </div>
       </div>
@@ -507,7 +529,7 @@ export function LearningStudioHub({
   const tabs: { id: StudioTab; label: string; icon: typeof BookOpen }[] = [
     { id: 'classes', label: 'Classes and assignments', icon: Users },
     { id: 'create', label: 'Create', icon: Sparkles },
-    { id: 'library', label: 'Personal library', icon: Library },
+    { id: 'library', label: 'Course materials', icon: Library },
     {
       id: 'team',
       label: mode === 'teacher' ? 'Teaching preferences' : 'Learning preferences',
@@ -531,27 +553,27 @@ export function LearningStudioHub({
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">
-                {selectedCourse ? selectedCourse.name : 'Personal authoring library'}
+                {selectedCourse ? selectedCourse.name : 'Semester course workspace'}
               </p>
               <p className="truncate text-[11px] text-muted-foreground">
                 {selectedCourse
                   ? [selectedCourse.code, selectedCourse.term, selectedCourse.audience]
                       .filter(Boolean)
                       .join(' · ') || 'Course workspace'
-                  : 'Create resources here; teach enrolled students in Classes and assignments'}
+                  : 'Prepare notes, complete PowerPoints, activities and assessments'}
               </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {courses.length > 0 ? (
               <label className="relative">
-                <span className="sr-only">Select personal collection</span>
+                <span className="sr-only">Select semester course</span>
                 <select
                   value={selectedCourseId ?? ''}
                   onChange={(event) => selectCourse(event.target.value || null)}
                   className="h-8 appearance-none rounded-xl border border-border bg-background pl-3 pr-8 text-xs font-medium outline-none focus:border-primary"
                 >
-                  <option value="">All personal collections</option>
+                  <option value="">All semester courses</option>
                   {courses.map((course) => (
                     <option key={course.id} value={course.id}>
                       {course.name}
@@ -566,7 +588,7 @@ export function LearningStudioHub({
               onClick={() => setCourseDialogOpen(true)}
               className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-border px-3 text-xs font-semibold hover:bg-muted"
             >
-              <Plus className="size-3.5" /> Collection
+              <Plus className="size-3.5" /> Semester course
             </button>
             <div className="flex h-8 rounded-xl bg-muted p-0.5" aria-label="Learning Studio mode">
               {(['teacher', 'student'] as const).map((item) => (
@@ -636,8 +658,8 @@ export function LearningStudioHub({
                           : 'What would you like to learn?'}
                       </h3>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        Choose a workflow, customize its inputs, then create a classroom or a
-                        downloadable resource.
+                        Choose a subject or workflow, customize it, then generate learning materials
+                        or a complete downloadable PowerPoint.
                       </p>
                     </div>
                     <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
@@ -1002,8 +1024,9 @@ export function LearningStudioHub({
                   <h3 className="font-semibold">Choose the download that matches your output</h3>
                   <ol className="list-decimal pl-5 space-y-2 text-sm">
                     <li>
-                      <strong>Lecture slides:</strong> open your generated classroom and select
-                      Download → Export PPTX. Speaker notes are included.
+                      <strong>Complete PowerPoint:</strong> choose Complete PPT on a subject card,
+                      generate the prepared classroom, then select Download → Export PPTX. The
+                      editable deck includes its generated slides and speaker notes.
                     </li>
                     <li>
                       <strong>Interactive activities:</strong> choose Export Resource Pack for HTML
