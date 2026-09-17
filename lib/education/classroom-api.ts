@@ -4,7 +4,11 @@ export type CourseRole = 'owner' | 'teacher' | 'reviewer' | 'student';
 export interface ManagedCourse {
   id: number;
   name: string;
+  code: string | null;
+  subject: string | null;
   education_level: string;
+  term: string | null;
+  version: number;
   role: CourseRole;
 }
 export interface ManagedLesson {
@@ -65,6 +69,83 @@ export interface ObjectiveResult {
   examples: { submission_id: number; assignment_id: number; question: number; response: Answer }[];
 }
 
+export type SemesterMaterial =
+  | 'lecturer-notes'
+  | 'student-notes'
+  | 'presentation'
+  | 'software-lab'
+  | 'exercise'
+  | 'quiz'
+  | 'assignment'
+  | 'answer-key'
+  | 'diagram';
+export interface SemesterWeek {
+  id: string;
+  week: number;
+  title: string;
+  topic: string;
+  outcomes: string[];
+  materials: SemesterMaterial[];
+  status: 'planned' | 'draft' | 'review' | 'published';
+  software: string[];
+  lab_steps: string[];
+  expected_output: string;
+  troubleshooting: string[];
+  source_ids: string[];
+}
+export interface SemesterSource {
+  id: string;
+  title: string;
+  author: string;
+  year: string;
+  url: string;
+  reference: string;
+}
+export interface SemesterWorkspace {
+  version: number;
+  academic_year: string;
+  semester: string;
+  start_date: string;
+  end_date: string;
+  improvement_notes: string;
+  weeks: SemesterWeek[];
+  sources: SemesterSource[];
+  presentation: {
+    slide_count: number;
+    duration_minutes: number;
+    aspect_ratio: 'wide' | 'standard';
+    theme: 'dmi-navy' | 'omitech-light' | 'plain';
+    lecturer_name: string;
+    logo_url: string;
+    include_speaker_notes: boolean;
+    include_discussion: boolean;
+    include_worked_examples: boolean;
+    include_software_demo: boolean;
+    lecturer_answers_only: boolean;
+  };
+}
+export interface Announcement {
+  id: number;
+  kind: 'announcement' | 'class' | 'deadline' | 'exam';
+  title: string;
+  body: string;
+  starts_at: string | null;
+  due_at: string | null;
+  status: 'draft' | 'published';
+  created_at: string;
+}
+export interface SubmissionAsset {
+  id: number;
+  assignment_id: number;
+  user_id: number;
+  filename: string;
+  mime_type: string;
+  size_bytes: number;
+  external_url: string | null;
+  asset_type: 'file' | 'link';
+  download_url: string | null;
+}
+
 export async function classroomApi<T>(
   path: string,
   body?: unknown,
@@ -89,6 +170,39 @@ export async function classroomApi<T>(
     );
   }
   return data as T;
+}
+
+export async function classroomUpload<T>(path: string, file: File): Promise<T> {
+  const form = new FormData();
+  form.set('file', file);
+  const response = await fetch(`/api/omitech/learning-studio/${path}`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    body: form,
+    signal: AbortSignal.timeout(60000),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.detail || data?.error || 'File upload failed.');
+  return data as T;
+}
+
+export async function downloadClassroomFile(path: string, fallbackName: string) {
+  const response = await fetch(`/api/omitech/learning-studio/${path}`, {
+    credentials: 'same-origin',
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.detail || data?.error || 'Download failed.');
+  }
+  const disposition = response.headers.get('content-disposition') || '';
+  const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || fallbackName;
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function downloadText(name: string, content: string, type = 'text/plain') {

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { OMITECH_SESSION_COOKIE, readOmitechIdentity } from '@/lib/omitech/session';
 
-const ALLOWED_METHODS = new Set(['GET', 'POST', 'PATCH', 'DELETE']);
+const ALLOWED_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 
 async function proxy(request: Request, context: { params: Promise<{ path: string[] }> }) {
   if (!readOmitechIdentity(request.headers)) {
@@ -48,6 +48,9 @@ async function proxy(request: Request, context: { params: Promise<{ path: string
       headers: {
         'content-type': response.headers.get('content-type') ?? 'application/json',
         'cache-control': 'no-store',
+        ...(response.headers.get('content-disposition')
+          ? { 'content-disposition': response.headers.get('content-disposition') as string }
+          : {}),
       },
     });
   } catch {
@@ -63,5 +66,6 @@ async function proxy(request: Request, context: { params: Promise<{ path: string
 
 export const GET = proxy;
 export const POST = proxy;
+export const PUT = proxy;
 export const PATCH = proxy;
 export const DELETE = proxy;

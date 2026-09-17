@@ -15,6 +15,7 @@ import { parseEducationContent } from '@/lib/education/artifacts';
 import { AssignedLessonReader } from './classroom-reader';
 import { MoodleExport } from './moodle-export';
 import { MoodleConnection, MoodleGradeTransfer } from './moodle-connection';
+import { SemesterOperations, StudentJoinPanel } from './semester-workspace';
 
 const field = 'block w-full rounded-lg border bg-background p-2 text-sm';
 
@@ -23,6 +24,8 @@ export function ClassroomBoard() {
   const [courseId, setCourseId] = useState<number>();
   const [name, setName] = useState('');
   const [level, setLevel] = useState('undergraduate');
+  const [code, setCode] = useState('');
+  const [term, setTerm] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [opened, setOpened] = useState<number>();
@@ -80,11 +83,15 @@ export function ClassroomBoard() {
             try {
               const created = await classroomApi<{ id: number }>('courses', {
                 name,
+                code: code || null,
+                subject: name,
+                term: term || null,
                 education_level: level,
               });
               await reload();
               setCourseId(created.id);
               setName('');
+              setCode('');
             } catch (e) {
               setError((e as Error).message);
             } finally {
@@ -101,6 +108,14 @@ export function ClassroomBoard() {
               required
               maxLength={240}
             />
+          </label>
+          <label>
+            Course code
+            <input className={field} value={code} onChange={(e) => setCode(e.target.value)} />
+          </label>
+          <label>
+            Semester
+            <input className={field} value={term} onChange={(e) => setTerm(e.target.value)} />
           </label>
           <label>
             Class level
@@ -121,6 +136,7 @@ export function ClassroomBoard() {
           not change class permissions.
         </p>
       </details>
+      <StudentJoinPanel onJoined={reload} />
       {course && <CourseWorkspace key={course.id} course={course} onOpen={setOpened} />}
     </section>
   );
@@ -136,7 +152,7 @@ function CourseWorkspace({
   const [lessons, setLessons] = useState<ManagedLesson[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [members, setMembers] = useState<
-    { id: number; name: string; email: string; role: string }[]
+    { id: number; user_id: number; name: string; email: string; role: string }[]
   >([]);
   const [report, setReport] = useState<{
     submitted: number;
@@ -187,6 +203,12 @@ function CourseWorkspace({
           {error}
         </p>
       )}
+      <SemesterOperations
+        course={course}
+        members={members}
+        assignments={assignments}
+        onReload={reload}
+      />
       {course.role === 'owner' && (
         <details className="rounded-xl border p-3">
           <summary>Class members and permissions ({members.length})</summary>
@@ -420,7 +442,8 @@ function LessonReview({
   const canPublish = ['owner', 'reviewer'].includes(role) && lesson.status === 'draft';
   const canEdit = ['owner', 'teacher'].includes(role);
   const labels: Record<string, string> = {
-    factual_accuracy: 'Facts, calculations, units and assumptions checked',
+    factual_accuracy:
+      'Facts, equations, calculations, units, diagrams, assumptions and software outputs checked',
     answer_key: 'Answers and objective mappings checked',
     accessibility: 'Language, readability and access checked',
     source_support: 'Cited passages checked; unsupported claims corrected',

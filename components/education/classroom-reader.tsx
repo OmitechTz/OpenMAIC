@@ -3,10 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   classroomApi,
+  classroomUpload,
+  downloadClassroomFile,
   downloadText,
   type Answer,
   type AssignedLesson,
   type Submission,
+  type SubmissionAsset,
 } from '@/lib/education/classroom-api';
 import { offlineAssignmentHtml } from '@/lib/education/offline-assignment';
 
@@ -19,6 +22,8 @@ export function AssignedLessonReader({ id, onBack }: { id: number; onBack: () =>
   const [status, setStatus] = useState('Loading assignment…');
   const [busy, setBusy] = useState(false);
   const [large, setLarge] = useState(false);
+  const [assets, setAssets] = useState<SubmissionAsset[]>([]);
+  const [link, setLink] = useState('');
   const pending = useRef<{ signature: string; body: unknown } | undefined>(undefined);
   useEffect(() => {
     let cancelled = false;
@@ -31,9 +36,13 @@ export function AssignedLessonReader({ id, onBack }: { id: number; onBack: () =>
         if (!session.authenticated || typeof learner !== 'string')
           throw new Error('Reload Learning Studio to verify your account.');
         const value = await classroomApi<AssignedLesson>(`assignments/${id}`);
+        const uploaded = await classroomApi<SubmissionAsset[]>(
+          `assignments/${id}/submission-assets`,
+        );
         if (cancelled) return;
         const key = `omitech-classroom-draft:${learner}:${id}`;
         setLesson(value);
+        setAssets(uploaded);
         setAnswers(value.submission?.answers || {});
         setStorageKey(key);
         try {
@@ -324,6 +333,109 @@ export function AssignedLessonReader({ id, onBack }: { id: number; onBack: () =>
               </fieldset>
             ))}
           </fieldset>
+          <section className="rounded-xl border p-3 space-y-3">
+            <h4 className="font-semibold">Project files and evidence</h4>
+            <p className="text-xs">
+              PDF, Word, PowerPoint, notebook, Python, images, ZIP, spreadsheets, video and HTTPS
+              repository links are supported. Files are limited to 50 MB each.
+            </p>
+            {assets.map((asset) => (
+              <div className="flex flex-wrap items-center gap-2" key={asset.id}>
+                <span className="flex-1">
+                  {asset.filename} ·{' '}
+                  {asset.asset_type === 'file'
+                    ? `${Math.ceil(asset.size_bytes / 1024)} KB`
+                    : 'link'}
+                </span>
+                {asset.external_url && (
+                  <a
+                    className="underline"
+                    href={asset.external_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open link
+                  </a>
+                )}
+                {asset.download_url && (
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      void downloadClassroomFile(
+                        `submission-assets/${asset.id}/download`,
+                        asset.filename,
+                      ).catch((e: Error) => setStatus(e.message))
+                    }
+                  >
+                    Download
+                  </Button>
+                )}
+                {!locked && (
+                  <Button
+                    variant="ghost"
+                    onClick={() =>
+                      void classroomApi(`submission-assets/${asset.id}`, undefined, 'DELETE')
+                        .then(() =>
+                          setAssets((current) => current.filter((item) => item.id !== asset.id)),
+                        )
+                        .catch((e: Error) => setStatus(e.message))
+                    }
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+            ))}
+            {!locked && (
+              <>
+                <label className="block">
+                  Attach a project file
+                  <input
+                    type="file"
+                    accept=".pdf,.docx,.pptx,.ipynb,.py,.png,.jpg,.jpeg,.zip,.xlsx,.csv,.mp4,.txt"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      setBusy(true);
+                      void classroomUpload<SubmissionAsset>(
+                        `assignments/${id}/submission-assets`,
+                        file,
+                      )
+                        .then((asset) => setAssets((current) => [...current, asset]))
+                        .catch((e: Error) => setStatus(e.message))
+                        .finally(() => setBusy(false));
+                      event.target.value = '';
+                    }}
+                  />
+                </label>
+                <form
+                  className="flex flex-wrap gap-2"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void classroomApi<SubmissionAsset>(`assignments/${id}/submission-links`, {
+                      url: link,
+                      label: 'Repository or project link',
+                    })
+                      .then((asset) => {
+                        setAssets((current) => [...current, asset]);
+                        setLink('');
+                      })
+                      .catch((e: Error) => setStatus(e.message));
+                  }}
+                >
+                  <input
+                    className="min-w-64 flex-1 rounded border bg-background p-2"
+                    type="url"
+                    pattern="https://.*"
+                    placeholder="https://repository-or-project-link"
+                    value={link}
+                    onChange={(event) => setLink(event.target.value)}
+                  />
+                  <Button variant="outline">Add link</Button>
+                </form>
+              </>
+            )}
+          </section>
           {!locked && (
             <div className="flex flex-wrap gap-3">
               <Button disabled={busy} variant="outline" onClick={() => void save(false)}>
