@@ -10,6 +10,7 @@ import {
   type MaterialMatrix,
 } from '@/lib/education/classroom-api';
 import { navigateOmitechParent } from '@/lib/omitech/parent-navigation';
+import { GovernanceTools } from './governance-tools';
 
 const field = 'block w-full rounded-lg border bg-background p-2 text-sm';
 
@@ -322,6 +323,67 @@ export function AcademicOperations({
               </Button>
             </div>
           )}
+          {!!gradeItem && !!gradeStudent && gradeScore !== '' && (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  void act(() =>
+                    classroomApi(
+                      `grade-items/${gradeItem}/moderation`,
+                      {
+                        user_id: gradeStudent,
+                        first_score: gradeScore,
+                        status: 'first_mark',
+                        notes: '',
+                      },
+                      'PUT',
+                    ),
+                  )
+                }
+              >
+                Record first mark
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  void act(() =>
+                    classroomApi(
+                      `grade-items/${gradeItem}/moderation`,
+                      {
+                        user_id: gradeStudent,
+                        second_score: gradeScore,
+                        status: 'second_mark',
+                        notes: '',
+                      },
+                      'PUT',
+                    ),
+                  )
+                }
+              >
+                Record second mark
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  void act(() =>
+                    classroomApi(
+                      `grade-items/${gradeItem}/moderation`,
+                      {
+                        user_id: gradeStudent,
+                        final_score: gradeScore,
+                        status: 'resolved',
+                        notes: 'Moderated final score',
+                      },
+                      'PUT',
+                    ),
+                  )
+                }
+              >
+                Approve moderated mark
+              </Button>
+            </div>
+          )}
           <p className="text-xs">Current assessment weight: {gradebook?.weight_total || 0}%</p>
         </section>
       )}
@@ -521,6 +583,8 @@ export function AcademicOperations({
           </div>
         </section>
       )}
+
+      <GovernanceTools course={course} members={members} />
     </details>
   );
 }
