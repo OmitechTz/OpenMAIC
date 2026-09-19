@@ -20,6 +20,7 @@ import { apiError } from '@/lib/server/api-response';
 import { createLogger } from '@/lib/logger';
 import { resolveModel } from '@/lib/server/resolve-model';
 import type { ThinkingConfig } from '@/lib/types/provider';
+import { OmitechPaidModelPolicyError } from '@/lib/omitech/session';
 const log = createLogger('Chat API');
 
 // Allow streaming responses up to 60 seconds
@@ -194,6 +195,9 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof OmitechPaidModelPolicyError) {
+      return apiError('INVALID_REQUEST', 403, error.message);
+    }
     log.error(
       `Chat request failed [model=${chatModel ?? 'unknown'}, messages=${chatMessageCount ?? 0}]:`,
       error,

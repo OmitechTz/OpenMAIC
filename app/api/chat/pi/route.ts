@@ -24,6 +24,7 @@ import { resolveModel } from '@/lib/server/resolve-model';
 import { apiError } from '@/lib/server/api-response';
 import type { ThinkingConfig } from '@/lib/types/provider';
 import type { StatelessChatRequest } from '@/lib/types/chat';
+import { OmitechPaidModelPolicyError } from '@/lib/omitech/session';
 import { resolveClassroomWebSearchConfig } from '@/lib/server/web-search-config';
 import { authenticatePersistenceHeaders } from '@/lib/persistence/server-auth';
 import { getServerPersistenceProvider } from '@/lib/persistence/server-provider';
@@ -292,6 +293,9 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof OmitechPaidModelPolicyError) {
+      return apiError('INVALID_REQUEST', 403, error.message);
+    }
     log.error(
       `Pi chat request failed [model=${chatModel ?? 'unknown'}, messages=${chatMessageCount ?? 0}]:`,
       error,

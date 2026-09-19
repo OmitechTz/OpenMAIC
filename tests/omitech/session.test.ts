@@ -8,6 +8,8 @@ import { POST as exchangeSession } from '@/app/api/omitech/session/route';
 import {
   createOmitechSessionToken,
   isOmitechIntegrationEnabled,
+  isFreeOmitechModel,
+  omitechPaidModelDenied,
   readOmitechIdentity,
   verifyOmitechLaunchToken,
   type OmitechIdentity,
@@ -58,6 +60,23 @@ describe('Omitech Learning Studio session', () => {
       name: 'Learner',
       role: 'learner',
     });
+  });
+
+  it('allows only local or OpenRouter free models when the signed policy disables paid use', () => {
+    const identity = verifyOmitechLaunchToken(launchToken({ paid_models_allowed: false }))!;
+    const { token } = createOmitechSessionToken(identity);
+    const headers = new Headers({ cookie: `omitech_learning_session=${token}` });
+
+    expect(isFreeOmitechModel('openrouter', 'openrouter/free')).toBe(true);
+    expect(isFreeOmitechModel('openrouter', 'meta-llama/llama-3.3:free')).toBe(true);
+    expect(isFreeOmitechModel('ollama', 'llama3.2')).toBe(true);
+    expect(omitechPaidModelDenied(headers, 'openrouter', 'openai/gpt-5')).toBe(true);
+    expect(omitechPaidModelDenied(headers, 'openrouter', 'openrouter/free')).toBe(false);
+
+    const paidIdentity = verifyOmitechLaunchToken(launchToken({ paid_models_allowed: true }))!;
+    const paid = createOmitechSessionToken(paidIdentity);
+    const paidHeaders = new Headers({ cookie: `omitech_learning_session=${paid.token}` });
+    expect(omitechPaidModelDenied(paidHeaders, 'openrouter', 'openai/gpt-5')).toBe(false);
   });
 
   it('rejects expired, wrong-audience, and tampered launch tokens', () => {
