@@ -6,6 +6,7 @@
  */
 
 import type { NextRequest } from 'next/server';
+import { headers } from 'next/headers';
 import { getModel, getProvider, parseModelString, type ModelWithInfo } from '@/lib/ai/providers';
 import type { ProviderType, ThinkingConfig } from '@/lib/types/provider';
 import {
@@ -15,6 +16,7 @@ import {
   resolveProxy,
 } from '@/lib/server/provider-config';
 import { validateUrlForSSRF } from '@/lib/server/ssrf-guard';
+import { OmitechPaidModelPolicyError, omitechPaidModelDenied } from '@/lib/omitech/session';
 import { getStageRoute, type LlmStage } from '@/lib/server/model-routes';
 
 export interface ResolvedModel extends ModelWithInfo {
@@ -68,6 +70,21 @@ export async function resolveModel(params: {
     );
   }
   const { providerId, modelId } = parseModelString(modelString);
+
+  // Server-side generation helpers do not always receive the Request object.
+  // Reading the active Next.js request here keeps the signed Omitech policy at
+  // the single model-resolution boundary used by every generation surface.
+  let activeHeaders: Awaited<ReturnType<typeof headers>> | undefined;
+  try {
+    activeHeaders = await headers();
+  } catch {
+    // Build scripts and isolated unit tests can resolve models outside a request.
+  }
+  if (activeHeaders && omitechPaidModelDenied(activeHeaders, providerId, modelId)) {
+    throw new OmitechPaidModelPolicyError(
+      'Paid models are disabled for Learning Studio. Choose an OpenRouter FREE model.',
+    );
+  }
 
   // When a stage route overrides the client's model, the client-sent connection
   // params (apiKey/baseUrl/providerType) belong to the client's *other* model

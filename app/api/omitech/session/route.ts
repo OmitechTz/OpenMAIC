@@ -16,6 +16,7 @@ function publicIdentity(identity: NonNullable<ReturnType<typeof readOmitechIdent
     name: identity.name,
     role: identity.role,
     learner_key: identity.ownerId,
+    paid_models_allowed: identity.paidModelsAllowed,
   };
 }
 

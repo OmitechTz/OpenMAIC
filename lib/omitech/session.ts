@@ -2,6 +2,8 @@ import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 
 export const OMITECH_SESSION_COOKIE = 'omitech_learning_session';
 
+export class OmitechPaidModelPolicyError extends Error {}
+
 const ISSUER = 'omitech-agent';
 const AUDIENCE = 'omitech-learning-studio';
 const MAX_TOKEN_LENGTH = 4096;
@@ -12,6 +14,7 @@ export interface OmitechIdentity {
   name: string;
   role: string;
   expiresAt: number;
+  paidModelsAllowed?: boolean;
 }
 
 interface TokenClaims extends Record<string, unknown> {
@@ -22,6 +25,7 @@ interface TokenClaims extends Record<string, unknown> {
   iat: number;
   exp: number;
   jti: string;
+  paid_models_allowed?: boolean;
 }
 
 function enabledValue(value: string | undefined): boolean {
@@ -115,6 +119,7 @@ function identityFromClaims(claims: TokenClaims): OmitechIdentity {
     name: 'Learner',
     role: 'learner',
     expiresAt: claims.exp,
+    paidModelsAllowed: claims.paid_models_allowed === true,
   };
 }
 
@@ -145,6 +150,7 @@ export function createOmitechSessionToken(identity: OmitechIdentity): {
     iat: now,
     exp: now + maxAge,
     jti: randomUUID(),
+    paid_models_allowed: identity.paidModelsAllowed,
   };
   return { token: signClaims(claims, secret), maxAge };
 }
@@ -163,8 +169,25 @@ function readCookie(cookieHeader: string | null, name: string): string | undefin
   return undefined;
 }
 
-export function readOmitechIdentity(headers: Headers): OmitechIdentity | undefined {
+export function readOmitechIdentity(headers: Pick<Headers, 'get'>): OmitechIdentity | undefined {
   const token = readCookie(headers.get('cookie'), OMITECH_SESSION_COOKIE);
   const claims = token ? verifiedClaims(token, 'omitech_session') : undefined;
   return claims ? identityFromClaims(claims) : undefined;
+}
+
+export function isFreeOmitechModel(providerId: string, modelId: string): boolean {
+  const provider = providerId.trim().toLowerCase();
+  const model = modelId.trim().toLowerCase();
+  return provider === 'ollama' || (
+    provider === 'openrouter' && (model === 'openrouter/free' || model === 'router/free' || model.endsWith(':free'))
+  );
+}
+
+export function omitechPaidModelDenied(
+  headers: Pick<Headers, 'get'>,
+  providerId: string,
+  modelId: string,
+): boolean {
+  const identity = readOmitechIdentity(headers);
+  return Boolean(identity && !identity.paidModelsAllowed && !isFreeOmitechModel(providerId, modelId));
 }
