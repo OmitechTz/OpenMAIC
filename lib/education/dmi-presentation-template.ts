@@ -20,8 +20,8 @@ const hex = (value: string) => value.replace('#', '').toUpperCase();
 function prepareDmiDocument(profile: DmiTemplateProfile, title: string) {
   const pptx = new pptxgen();
   pptx.layout = 'LAYOUT_WIDE';
-  pptx.author = profile.lecturer || 'Dar es Salaam Maritime Institute';
-  pptx.company = 'Dar es Salaam Maritime Institute';
+  pptx.author = profile.lecturer || 'DMI Teaching Hub';
+  pptx.company = 'DMI Teaching Hub';
   pptx.subject = `${profile.courseCode} ${profile.courseName}`.trim();
   pptx.title = title;
   pptx.theme = {
