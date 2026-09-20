@@ -76,7 +76,7 @@ export default function DashboardPage() {
               <GraduationCap className="size-5" />
             </div>
             <div>
-              <p className="text-sm font-semibold">Dar es Salaam Maritime Institute</p>
+              <p className="text-sm font-semibold">DMI Teaching Hub</p>
               <p className="text-xs text-white/70">Teacher dashboard</p>
             </div>
           </Link>

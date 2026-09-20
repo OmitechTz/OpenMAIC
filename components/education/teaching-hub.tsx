@@ -86,7 +86,7 @@ const DMI_PROFILE_DEFAULTS = {
   accent: '#D6A84B',
   headingFont: 'Aptos Display',
   bodyFont: 'Aptos',
-  footer: 'Dar es Salaam Maritime Institute',
+  footer: 'DMI Teaching Hub',
 };
 
 export function TeachingHub() {
@@ -214,8 +214,8 @@ export function TeachingHub() {
               <GraduationCap className="size-5" />
             </div>
             <div>
-              <p className="text-sm font-semibold">Dar es Salaam Maritime Institute</p>
-              <p className="text-xs text-white/70">DMI Teaching Hub</p>
+              <p className="text-sm font-semibold">DMI Teaching Hub</p>
+              <p className="text-xs text-white/70">Learning home</p>
             </div>
           </div>
           <nav className="flex items-center gap-2">
