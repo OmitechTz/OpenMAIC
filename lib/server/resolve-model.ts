@@ -82,7 +82,7 @@ export async function resolveModel(params: {
   }
   if (activeHeaders && omitechPaidModelDenied(activeHeaders, providerId, modelId)) {
     throw new OmitechPaidModelPolicyError(
-      'Paid models are disabled for Learning Studio. Choose an OpenRouter FREE model.',
+      `The selected model "${providerId}:${modelId}" is a paid model and paid models are disabled by the administrator's cost policy for this deployment. Choose a free model or ask the administrator to enable paid models.`,
     );
   }
 

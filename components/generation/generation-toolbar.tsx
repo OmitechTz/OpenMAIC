@@ -48,6 +48,7 @@ import {
 import { dedupeCourseMaterialFiles } from '@/lib/document/course-materials';
 import type { SelectedCourseMaterial } from '@/lib/types/generation';
 import { findModelById, modelIdsMatch } from '@/lib/ai/model-aliases';
+import { getModelBrand, getModelDisplayName, isFreeModel } from '@/lib/ai/provider-brand';
 import {
   BROWSER_SEARCH_ENGINES,
   getPreferredBrowserSearchEngine,
@@ -907,8 +908,18 @@ function ModelSettingsPopover({
   const currentProviderName =
     currentProvider?.name ?? currentProviderConfig?.name ?? currentProviderId;
   const currentProviderIcon = currentProvider?.icon ?? currentProviderConfig?.icon;
-  // Discovery remains available before a connection is configured.
-  const currentModelLabel = currentModel?.name || currentModelId || 'Choose a model or provider';
+  // For gateway providers (e.g. OpenRouter) the logo follows the model's vendor;
+  // direct connections keep the provider logo. Unknown vendors fall back to the
+  // provider icon, then a generic AI icon — never a crash.
+  const currentModelBrand =
+    currentProviderId && currentModelId ? getModelBrand(currentProviderId, currentModelId) : null;
+  const currentDisplayIcon = currentModelBrand?.icon ?? currentProviderIcon;
+  // Discovery remains available before a connection is configured. Never show
+  // only a raw model ID: fall back to a friendly derived display name.
+  const currentModelLabel =
+    currentModel?.name ||
+    (currentModelId ? getModelDisplayName(currentModelId) : 'Choose a model or provider');
+  const currentModelIsFree = currentModelId ? isFreeModel(currentModelId) : false;
   const currentThinkingValue = getThinkingDisplayValue(
     currentModel?.capabilities?.thinking,
     thinkingConfig,
@@ -938,9 +949,9 @@ function ModelSettingsPopover({
                   'shadow-[0_0_0_1px_rgba(124,58,237,0.12)] dark:shadow-[0_0_0_1px_rgba(167,139,250,0.16)]',
               )}
             >
-              {currentProviderIcon ? (
+              {currentDisplayIcon ? (
                 <img
-                  src={currentProviderIcon}
+                  src={currentDisplayIcon}
                   alt={currentProviderName}
                   className="size-4 shrink-0 rounded-sm"
                 />
@@ -948,6 +959,11 @@ function ModelSettingsPopover({
                 <Bot className="size-3.5 shrink-0" />
               )}
               <span className="max-w-48 truncate">{currentModelLabel}</span>
+              {currentModelIsFree && (
+                <span className="shrink-0 rounded border border-emerald-300/60 bg-emerald-50 px-1 py-0 text-[9px] font-semibold leading-4 text-emerald-700 dark:border-emerald-700/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+                  FREE
+                </span>
+              )}
               {currentThinkingLabel && (
                 <span className="shrink-0 rounded-full bg-white/80 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-violet-700 ring-1 ring-violet-200/70 dark:bg-violet-950/50 dark:text-violet-200 dark:ring-violet-800/70">
                   {currentThinkingLabel}
@@ -957,7 +973,7 @@ function ModelSettingsPopover({
           </PopoverTrigger>
         </TooltipTrigger>
         <TooltipContent>
-          {`${currentProviderConfig?.name || currentProviderId} / ${currentModelId}`}
+          {`${currentProviderName} / ${currentModelLabel}`}
         </TooltipContent>
       </Tooltip>
 
@@ -1073,6 +1089,8 @@ function ModelSettingsPopover({
                 visibleModelEntries.map(({ provider, model }) => {
                   const isSelected =
                     currentProviderId === provider.id && currentModelId === model.id;
+                  const brand = getModelBrand(provider.id, model.id);
+                  const modelIsFree = isFreeModel(model.id);
                   const selectModel = () => {
                     if (!provider.ready) {
                       setPopoverOpen(false);
@@ -1100,6 +1118,15 @@ function ModelSettingsPopover({
                           : 'hover:bg-muted/60',
                       )}
                     >
+                      {brand.icon ? (
+                        <img
+                          src={brand.icon}
+                          alt={brand.name}
+                          className={cn('size-4 shrink-0 rounded-sm', brand.mono && 'dark:invert')}
+                        />
+                      ) : (
+                        <Bot className="size-4 shrink-0 text-muted-foreground" />
+                      )}
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-mono text-xs font-medium">{model.name}</div>
                         {model.id !== model.name && (
@@ -1108,6 +1135,11 @@ function ModelSettingsPopover({
                           </div>
                         )}
                       </div>
+                      {modelIsFree && (
+                        <span className="shrink-0 rounded border border-emerald-300/60 bg-emerald-50 px-1 py-0 text-[9px] font-semibold leading-4 text-emerald-700 dark:border-emerald-700/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+                          FREE
+                        </span>
+                      )}
                       {isSelected && currentModel && (
                         <InlineThinkingControl
                           model={currentModel}
