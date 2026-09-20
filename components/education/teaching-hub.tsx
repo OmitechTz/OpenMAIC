@@ -218,13 +218,21 @@ export function TeachingHub() {
               <p className="text-xs text-white/70">DMI Teaching Hub</p>
             </div>
           </div>
-          <Link
-            href="/studio"
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/25 px-3 text-xs font-semibold text-white transition hover:bg-white/10"
-          >
-            <Sparkles className="size-3.5" />
-            Open the full Learning Studio
-          </Link>
+          <nav className="flex items-center gap-2">
+            <Link
+              href="/dashboard"
+              className="inline-flex h-9 items-center rounded-xl border border-white/25 px-3 text-xs font-semibold text-white transition hover:bg-white/10"
+            >
+              My courses
+            </Link>
+            <Link
+              href="/learning-studio"
+              className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/25 px-3 text-xs font-semibold text-white transition hover:bg-white/10"
+            >
+              <Sparkles className="size-3.5" />
+              Open the full Learning Studio
+            </Link>
+          </nav>
         </div>
       </header>
 
@@ -450,7 +458,7 @@ export function TeachingHub() {
                   <Download className="size-4" /> Markdown
                 </Button>
                 <Button type="button" variant="ghost" asChild>
-                  <Link href="/studio">Continue in the Learning Studio</Link>
+                  <Link href="/learning-studio">Continue in the Learning Studio</Link>
                 </Button>
               </div>
               <p className="mt-3 text-[11px] leading-5 text-muted-foreground">

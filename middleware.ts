@@ -125,15 +125,20 @@ export async function middleware(request: NextRequest) {
     return new NextResponse('Not found', { status: 404 });
   }
 
+  // Legacy route scheme: the DMI Teaching Hub is the learning home at `/` and
+  // the OpenMAIC Learning Studio lives at `/learning-studio`. Keep old links
+  // (and the current iframe embed) working with permanent redirects.
+  if (pathname === '/teach') {
+    return NextResponse.redirect(new URL('/', request.url), 308);
+  }
+  if (pathname === '/studio') {
+    return NextResponse.redirect(new URL('/learning-studio', request.url), 308);
+  }
+
   const omitechIntegrated = ['1', 'true'].includes(
     (process.env.OMITECH_INTEGRATION_ENABLED ?? '').toLowerCase(),
   );
   if (omitechIntegrated) {
-    // learn.omitechai.com lands on the dedicated DMI Teaching Hub; the full
-    // OpenMAIC studio remains available at /studio (page and iframe embeds).
-    if (pathname === '/') {
-      return NextResponse.redirect(new URL('/teach', request.url));
-    }
     if (pathname === '/api/health' || pathname.startsWith('/api/omitech/session')) {
       return NextResponse.next();
     }

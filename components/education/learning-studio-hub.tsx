@@ -619,7 +619,7 @@ export function LearningStudioHub({
                         </p>
                       </div>
                       <Link
-                        href="/teach"
+                        href="/"
                         className="inline-flex h-8 shrink-0 items-center rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground"
                       >
                         Open Teaching Hub
@@ -872,7 +872,7 @@ export function LearningStudioHub({
                       select Download → Export PPTX. The editable deck includes its generated
                       slides and speaker notes. DMI semester subject templates with a one-click
                       Complete PPT live in the{' '}
-                      <Link href="/teach" className="font-medium text-primary underline">
+                      <Link href="/" className="font-medium text-primary underline">
                         Teaching Hub
                       </Link>
                       .
