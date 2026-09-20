@@ -129,6 +129,11 @@ export async function middleware(request: NextRequest) {
     (process.env.OMITECH_INTEGRATION_ENABLED ?? '').toLowerCase(),
   );
   if (omitechIntegrated) {
+    // learn.omitechai.com lands on the dedicated DMI Teaching Hub; the full
+    // OpenMAIC studio remains available at /studio (page and iframe embeds).
+    if (pathname === '/') {
+      return NextResponse.redirect(new URL('/teach', request.url));
+    }
     if (pathname === '/api/health' || pathname.startsWith('/api/omitech/session')) {
       return NextResponse.next();
     }

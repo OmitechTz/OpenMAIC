@@ -13,7 +13,6 @@ import {
   type SemesterMaterial,
   type SemesterWorkspace,
 } from '@/lib/education/classroom-api';
-import { TEACHING_TEMPLATES } from '@/lib/education/teaching-templates';
 import { briefSchema, parseEducationContent } from '@/lib/education/artifacts';
 import { useEducationStudioStore } from '@/lib/store/education-studio';
 import { useLearningResourcesStore } from '@/lib/store/learning-resources';
@@ -193,19 +192,19 @@ export function StudentJoinPanel({ onJoined }: { onJoined: () => Promise<void> }
   );
 }
 
-function starterWeeks(course: ManagedCourse) {
-  const template = TEACHING_TEMPLATES.find((item) => item.code === course.code);
-  const units = template?.units || [
-    'Course orientation and foundations',
-    'Core concepts and terminology',
-    'Methods and worked examples',
-    'Applied practice',
-    'Analysis and troubleshooting',
-    'Integrated project',
-  ];
+const STARTER_UNITS = [
+  'Course orientation and foundations',
+  'Core concepts and terminology',
+  'Methods and worked examples',
+  'Applied practice',
+  'Analysis and troubleshooting',
+  'Integrated project',
+];
+
+function starterWeeks() {
   const weeks = Array.from({ length: 15 }, (_, index) => {
     const week = index + 1;
-    const unit = units[Math.min(Math.floor(index / 2), units.length - 1)];
+    const unit = STARTER_UNITS[Math.min(Math.floor(index / 2), STARTER_UNITS.length - 1)];
     const ending =
       week === 13
         ? 'Integrated project'
@@ -219,7 +218,7 @@ function starterWeeks(course: ManagedCourse) {
       week,
       title: ending,
       topic: ending,
-      outcomes: template?.objectives.slice(0, 2) || [],
+      outcomes: [] as string[],
       materials: [
         'lecturer-notes',
         'student-notes',
@@ -228,7 +227,7 @@ function starterWeeks(course: ManagedCourse) {
         'quiz',
       ] as SemesterMaterial[],
       status: 'planned' as const,
-      software: week % 2 === 0 ? template?.software || [] : [],
+      software: [] as string[],
       lab_steps:
         week % 2 === 0
           ? [
@@ -575,7 +574,7 @@ export function SemesterOperations({
             <Button
               className="mt-3"
               variant="outline"
-              onClick={() => setWorkspace({ ...workspace, weeks: starterWeeks(course) })}
+              onClick={() => setWorkspace({ ...workspace, weeks: starterWeeks() })}
             >
               Build a 15-week editable plan
             </Button>

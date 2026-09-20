@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import {
   BarChart3,
   BookOpen,
@@ -8,7 +9,6 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
-  ClipboardCheck,
   Cloud,
   FileText,
   FolderOpen,
@@ -33,19 +33,10 @@ import { EducationWorkbench } from './education-workbench';
 import { ClassroomBoard } from './classroom-board';
 import { LearningProgress } from './practice-panel';
 
-import {
-  buildEducationWorkflowPrompt,
-  EDUCATION_WORKFLOWS,
-  TEACHING_ROLE_COPY,
-  type AssessmentOptions,
-  type EducationWorkflowId,
-} from '@/lib/education/workflows';
-import { TEACHING_TEMPLATES } from '@/lib/education/teaching-templates';
 import { navigateOmitechParent } from '@/lib/omitech/parent-navigation';
 import {
   type EducationIntegrationId,
   type EducationLevel,
-  type TeachingRoleId,
   useEducationStudioStore,
 } from '@/lib/store/education-studio';
 import type { SelectedCourseMaterial } from '@/lib/types/generation';
@@ -76,15 +67,6 @@ const LEVELS: { id: EducationLevel; label: string }[] = [
   { id: 'postgraduate', label: 'Postgraduate' },
   { id: 'professional', label: 'Professional learning' },
 ];
-
-const ROLE_ICONS: Record<TeachingRoleId, typeof BookOpen> = {
-  'course-designer': CalendarDays,
-  'subject-expert': BookOpen,
-  'assessment-coach': ClipboardCheck,
-  'research-assistant': BrainCircuit,
-  'presentation-designer': Presentation,
-  'student-tutor': GraduationCap,
-};
 
 const INTEGRATIONS: {
   id: EducationIntegrationId;
@@ -151,13 +133,6 @@ const OMITECH_TOOLS = [
   { label: 'Recordings', path: '/transcribe', icon: Mail },
 ] as const;
 
-const DEFAULT_ASSESSMENT: AssessmentOptions = {
-  questionCount: 10,
-  difficulty: 'mixed',
-  bloomLevel: 'mixed',
-  questionTypes: ['multiple choice', 'short answer'],
-};
-
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
@@ -218,29 +193,7 @@ function CourseDialog({ onClose }: { onClose: () => void }) {
             <X className="size-4" />
           </button>
         </div>
-        <div className="mt-5">
-          <p className="text-xs font-medium">Start with a teaching subject</p>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            {TEACHING_TEMPLATES.map((template) => (
-              <button
-                key={template.id}
-                type="button"
-                onClick={() => {
-                  setName(template.title);
-                  setCode(template.code);
-                  setSubject(template.title);
-                  setLevel('undergraduate');
-                  setAudience(`${template.programme} ${template.year} students`);
-                }}
-                className="rounded-xl border border-border px-3 py-2 text-left text-xs transition hover:border-primary/40 hover:bg-primary/5"
-              >
-                <span className="font-semibold">{template.code}</span>
-                <span className="text-muted-foreground"> · {template.title}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <label className="text-xs font-medium sm:col-span-2">
             Course name
             <input
@@ -424,7 +377,6 @@ export function LearningStudioHub({
   const [expanded, setExpanded] = useState(true);
   const [courseDialogOpen, setCourseDialogOpen] = useState(false);
   const [integrationDialog, setIntegrationDialog] = useState<EducationIntegrationId | null>(null);
-  const [assessment, setAssessment] = useState<AssessmentOptions>(DEFAULT_ASSESSMENT);
   const [resourceBusy, setResourceBusy] = useState(false);
   const resourceInputRef = useRef<HTMLInputElement>(null);
 
@@ -437,7 +389,6 @@ export function LearningStudioHub({
   const addResource = useEducationStudioStore((state) => state.addResource);
   const removeResource = useEducationStudioStore((state) => state.removeResource);
   const teachingRoleIds = useEducationStudioStore((state) => state.teachingRoleIds);
-  const toggleTeachingRole = useEducationStudioStore((state) => state.toggleTeachingRole);
   const guardrails = useEducationStudioStore((state) => state.guardrails);
   const updateGuardrails = useEducationStudioStore((state) => state.updateGuardrails);
   const institution = useEducationStudioStore((state) => state.institution);
@@ -454,20 +405,6 @@ export function LearningStudioHub({
     () => new Set(currentMaterials.map((material) => `${material.name}:${material.size}`)),
     [currentMaterials],
   );
-
-  const chooseWorkflow = (workflowId: EducationWorkflowId) => {
-    const prompt = buildEducationWorkflowPrompt({
-      workflowId,
-      mode,
-      course: selectedCourse,
-      roleIds: teachingRoleIds,
-      guardrails,
-      assessment,
-    });
-    onPromptChange(prompt);
-    onFocusComposer();
-    toast.success(`${EDUCATION_WORKFLOWS[workflowId].title} is ready to customize`);
-  };
 
   const uploadResources = async (files: File[]) => {
     if (!selectedCourse) {
@@ -654,21 +591,41 @@ export function LearningStudioHub({
                     <div>
                       <h3 className="text-sm font-semibold">
                         {mode === 'teacher'
-                          ? 'What are you teaching today?'
+                          ? 'Create learning materials'
                           : 'What would you like to learn?'}
                       </h3>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        Choose a subject or workflow, customize it, then generate learning materials
-                        or a complete downloadable PowerPoint.
+                        Describe your brief, customize it, then generate learning materials or a
+                        complete downloadable PowerPoint.
                       </p>
                     </div>
                     <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
                       <ShieldCheck className="size-3.5 text-emerald-600" />
                       {mode === 'teacher'
-                        ? `${teachingRoleIds.length} teaching roles active`
+                        ? 'Student-safe controls apply to generated materials'
                         : 'Personal guided practice · class rules apply to assignments'}
                     </div>
                   </div>
+                  {mode === 'teacher' && (
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3">
+                      <div className="flex min-w-0 items-center gap-2.5 text-xs">
+                        <GraduationCap className="size-4 shrink-0 text-primary" />
+                        <p className="text-muted-foreground">
+                          <span className="font-semibold text-foreground">
+                            Teaching the DMI semester subjects?
+                          </span>{' '}
+                          Subject templates, teaching workflows and teaching roles now live in the
+                          dedicated Teaching Hub.
+                        </p>
+                      </div>
+                      <Link
+                        href="/teach"
+                        className="inline-flex h-8 shrink-0 items-center rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground"
+                      >
+                        Open Teaching Hub
+                      </Link>
+                    </div>
+                  )}
                   <EducationWorkbench
                     mode={mode}
                     course={selectedCourse}
@@ -678,72 +635,6 @@ export function LearningStudioHub({
                       onFocusComposer();
                     }}
                   />
-                  {mode === 'teacher' && (
-                    <div className="mt-4 grid gap-3 rounded-2xl border border-border/70 bg-muted/25 p-4 md:grid-cols-4">
-                      <label className="text-[11px] font-medium">
-                        Assessment questions
-                        <input
-                          type="number"
-                          min={1}
-                          max={100}
-                          value={assessment.questionCount}
-                          onChange={(event) =>
-                            setAssessment((current) => ({
-                              ...current,
-                              questionCount: Math.max(
-                                1,
-                                Math.min(100, Number(event.target.value) || 1),
-                              ),
-                            }))
-                          }
-                          className="mt-1.5 h-9 w-full rounded-xl border border-border bg-background px-3 text-xs"
-                        />
-                      </label>
-                      <label className="text-[11px] font-medium">
-                        Difficulty
-                        <select
-                          value={assessment.difficulty}
-                          onChange={(event) =>
-                            setAssessment((current) => ({
-                              ...current,
-                              difficulty: event.target.value as AssessmentOptions['difficulty'],
-                            }))
-                          }
-                          className="mt-1.5 h-9 w-full rounded-xl border border-border bg-background px-3 text-xs"
-                        >
-                          <option value="introductory">Introductory</option>
-                          <option value="mixed">Mixed</option>
-                          <option value="advanced">Advanced</option>
-                        </select>
-                      </label>
-                      <label className="text-[11px] font-medium">
-                        Bloom level
-                        <select
-                          value={assessment.bloomLevel}
-                          onChange={(event) =>
-                            setAssessment((current) => ({
-                              ...current,
-                              bloomLevel: event.target.value as AssessmentOptions['bloomLevel'],
-                            }))
-                          }
-                          className="mt-1.5 h-9 w-full rounded-xl border border-border bg-background px-3 text-xs"
-                        >
-                          <option value="mixed">Mixed</option>
-                          <option value="remember-understand">Remember & understand</option>
-                          <option value="apply-analyse">Apply & analyse</option>
-                          <option value="evaluate-create">Evaluate & create</option>
-                        </select>
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => chooseWorkflow('assessment')}
-                        className="mt-auto inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground"
-                      >
-                        <ClipboardCheck className="size-3.5" />
-                        Build assessment
-                      </button>
-                    </div>
-                  )}
                 </div>
               ) : null}
 
@@ -850,60 +741,12 @@ export function LearningStudioHub({
               {tab === 'team' ? (
                 <div>
                   <div>
-                    <h3 className="text-sm font-semibold">
-                      {mode === 'teacher'
-                        ? 'Teaching perspectives'
-                        : 'Learning support preferences'}
-                    </h3>
+                    <h3 className="text-sm font-semibold">Learning support preferences</h3>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      These perspectives guide classroom prompts. They do not represent independent
-                      specialist reviews.
+                      These controls guide classroom prompts and generated materials.
                     </p>
                   </div>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {(Object.keys(TEACHING_ROLE_COPY) as TeachingRoleId[]).map((id) => {
-                      const role = TEACHING_ROLE_COPY[id];
-                      const Icon = ROLE_ICONS[id];
-                      const active = teachingRoleIds.includes(id);
-                      return (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => toggleTeachingRole(id)}
-                          aria-pressed={active}
-                          className={cn(
-                            'rounded-2xl border p-4 text-left transition',
-                            active
-                              ? 'border-primary/40 bg-primary/6'
-                              : 'border-border/70 hover:border-primary/25',
-                          )}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div
-                              className={cn(
-                                'flex size-9 items-center justify-center rounded-xl',
-                                active
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-muted text-muted-foreground',
-                              )}
-                            >
-                              <Icon className="size-4" />
-                            </div>
-                            {active ? (
-                              <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">
-                                Active
-                              </span>
-                            ) : null}
-                          </div>
-                          <p className="mt-3 text-sm font-semibold">{role.name}</p>
-                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                            {role.description}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-5 rounded-2xl border border-border/70 bg-muted/25 p-4">
+                  <div className="mt-4 rounded-2xl border border-border/70 bg-muted/25 p-4">
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="size-4 text-emerald-600" />
                       <h4 className="text-xs font-semibold">Student-safe learning controls</h4>
@@ -1024,9 +867,15 @@ export function LearningStudioHub({
                   <h3 className="font-semibold">Choose the download that matches your output</h3>
                   <ol className="list-decimal pl-5 space-y-2 text-sm">
                     <li>
-                      <strong>Complete PowerPoint:</strong> choose Complete PPT on a subject card,
-                      generate the prepared classroom, then select Download → Export PPTX. The
-                      editable deck includes its generated slides and speaker notes.
+                      <strong>Complete PowerPoint:</strong> in Create, choose the interactive
+                      classroom / lecture slides output, generate the prepared classroom, then
+                      select Download → Export PPTX. The editable deck includes its generated
+                      slides and speaker notes. DMI semester subject templates with a one-click
+                      Complete PPT live in the{' '}
+                      <Link href="/teach" className="font-medium text-primary underline">
+                        Teaching Hub
+                      </Link>
+                      .
                     </li>
                     <li>
                       <strong>Interactive activities:</strong> choose Export Resource Pack for HTML
