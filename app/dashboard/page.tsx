@@ -71,22 +71,16 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-muted/30">
       <header className="bg-[#12345B] text-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-3">
+          <Link href="/learning-studio" className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-xl bg-[#D6A84B] text-[#12345B]">
               <GraduationCap className="size-5" />
             </div>
             <div>
-              <p className="text-sm font-semibold">DMI Teaching Hub</p>
+              <p className="text-sm font-semibold">Learning Studio</p>
               <p className="text-xs text-white/70">Teacher dashboard</p>
             </div>
           </Link>
           <nav className="flex items-center gap-2">
-            <Link
-              href="/"
-              className="inline-flex h-9 items-center rounded-xl border border-white/25 px-3 text-xs font-semibold text-white transition hover:bg-white/10"
-            >
-              Learning home
-            </Link>
             <Link
               href="/learning-studio"
               className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/25 px-3 text-xs font-semibold text-white transition hover:bg-white/10"
@@ -154,9 +148,9 @@ export default function DashboardPage() {
               </p>
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
                 <Button type="button" asChild>
-                  <Link href="/">
+                  <Link href="/learning-studio">
                     <LogIn className="size-4" />
-                    Back to the learning home
+                    Back to the Learning Studio
                   </Link>
                 </Button>
               </div>
@@ -180,8 +174,7 @@ export default function DashboardPage() {
                 </div>
                 <h2 className="mt-4 text-lg font-semibold">No courses yet</h2>
                 <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                  Create your first class in the Learning Studio, or prepare teaching materials from
-                  the learning home.
+                  Create your first class or prepare teaching materials in the Learning Studio.
                 </p>
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
                   <Button type="button" asChild>
@@ -189,9 +182,6 @@ export default function DashboardPage() {
                       <Sparkles className="size-4" />
                       Open the Learning Studio
                     </Link>
-                  </Button>
-                  <Button type="button" variant="outline" asChild>
-                    <Link href="/">Learning home</Link>
                   </Button>
                 </div>
               </div>

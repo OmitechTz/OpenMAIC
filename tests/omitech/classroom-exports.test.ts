@@ -8,7 +8,7 @@ import { TEACHING_TEMPLATES, teachingTemplateBrief } from '@/lib/education/teach
 import { briefSchema } from '@/lib/education/artifacts';
 
 describe('teaching subject templates', () => {
-  it('contains the four configured DMI semester subjects', () => {
+  it('contains the four configured semester subjects', () => {
     expect(TEACHING_TEMPLATES.map(({ code, title }) => ({ code, title }))).toEqual([
       { code: 'MEU 07571', title: 'Artificial Intelligence' },
       { code: 'MEU 07569', title: 'Industrial Automation' },

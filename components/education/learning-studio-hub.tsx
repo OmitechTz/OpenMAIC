@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import {
   BarChart3,
   BookOpen,
@@ -606,26 +605,6 @@ export function LearningStudioHub({
                         : 'Personal guided practice · class rules apply to assignments'}
                     </div>
                   </div>
-                  {mode === 'teacher' && (
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3">
-                      <div className="flex min-w-0 items-center gap-2.5 text-xs">
-                        <GraduationCap className="size-4 shrink-0 text-primary" />
-                        <p className="text-muted-foreground">
-                          <span className="font-semibold text-foreground">
-                            Teaching the DMI semester subjects?
-                          </span>{' '}
-                          Subject templates, teaching workflows and teaching roles now live in the
-                          dedicated Teaching Hub.
-                        </p>
-                      </div>
-                      <Link
-                        href="/"
-                        className="inline-flex h-8 shrink-0 items-center rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground"
-                      >
-                        Open Teaching Hub
-                      </Link>
-                    </div>
-                  )}
                   <EducationWorkbench
                     mode={mode}
                     course={selectedCourse}
@@ -870,12 +849,7 @@ export function LearningStudioHub({
                       <strong>Complete PowerPoint:</strong> in Create, choose the interactive
                       classroom / lecture slides output, generate the prepared classroom, then
                       select Download → Export PPTX. The editable deck includes its generated
-                      slides and speaker notes. DMI semester subject templates with a one-click
-                      Complete PPT live in the{' '}
-                      <Link href="/" className="font-medium text-primary underline">
-                        Teaching Hub
-                      </Link>
-                      .
+                      slides and speaker notes.
                     </li>
                     <li>
                       <strong>Interactive activities:</strong> choose Export Resource Pack for HTML

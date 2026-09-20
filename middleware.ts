@@ -125,11 +125,10 @@ export async function middleware(request: NextRequest) {
     return new NextResponse('Not found', { status: 404 });
   }
 
-  // Legacy route scheme: the DMI Teaching Hub is the learning home at `/` and
-  // the OpenMAIC Learning Studio lives at `/learning-studio`. Keep old links
-  // (and the current iframe embed) working with permanent redirects.
+  // Legacy route scheme: the Learning Studio is the learning home; `/`
+  // redirects there. Keep old links working with permanent redirects.
   if (pathname === '/teach') {
-    return NextResponse.redirect(new URL('/', request.url), 308);
+    return NextResponse.redirect(new URL('/learning-studio', request.url), 308);
   }
   if (pathname === '/studio') {
     return NextResponse.redirect(new URL('/learning-studio', request.url), 308);

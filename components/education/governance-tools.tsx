@@ -12,7 +12,7 @@ import {
 
 const field = 'block w-full rounded-lg border bg-background p-2 text-sm';
 const PILOT_STEPS = {
-  lecturer: ['Create course', 'Publish week', 'Download DMI PPTX', 'Mark work', 'Export archive'],
+  lecturer: ['Create course', 'Publish week', 'Download branded PPTX', 'Mark work', 'Export archive'],
   student: ['Join class', 'Open week', 'Download offline material', 'Submit work', 'Read feedback'],
 } as const;
 
@@ -113,7 +113,7 @@ export function GovernanceTools({
 
       {course.role === 'owner' && (
         <section className="mt-4 space-y-2">
-          <h5 className="font-medium">Official DMI PowerPoint template</h5>
+          <h5 className="font-medium">Official PowerPoint template</h5>
           <p className="text-xs text-muted-foreground">
             Upload the institution-approved PPTX. The original file is preserved for lecturers to
             download and use without reconstructing its layouts.
@@ -153,7 +153,7 @@ export function GovernanceTools({
                 onClick={() =>
                   void downloadClassroomFile(
                     `classrooms/${course.id}/official-presentation-template`,
-                    dashboard.official_template?.name || 'DMI-template.pptx',
+                    dashboard.official_template?.name || 'master-template.pptx',
                   )
                 }
               >

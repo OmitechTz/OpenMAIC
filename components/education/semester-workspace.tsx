@@ -20,7 +20,7 @@ import { useSettingsStore } from '@/lib/store/settings';
 import { isLLMProviderConfigured } from '@/lib/store/settings-validation';
 import { getCurrentModelConfig } from '@/lib/utils/model-config';
 import { AcademicOperations } from './academic-operations';
-import { downloadDmiPresentationTemplate } from '@/lib/education/dmi-presentation-template';
+import { downloadMasterPresentationTemplate } from '@/lib/education/master-presentation-template';
 
 const field = 'block w-full rounded-lg border bg-background p-2 text-sm';
 const MATERIALS: { id: SemesterMaterial; label: string }[] = [
@@ -370,8 +370,8 @@ export function SemesterOperations({
     return [
       `Create ${p.slide_count} editable ${p.aspect_ratio === 'wide' ? '16:9' : '4:3'} slides for approximately ${p.duration_minutes} minutes.`,
       `Use the ${p.theme} visual theme; show course ${course.code || course.name}, semester ${workspace.semester || course.term || ''}, academic year ${workspace.academic_year}, and lecturer ${p.lecturer_name || 'name to be confirmed'}.`,
-      p.enforce_dmi_master
-        ? `Enforce the DMI master on every slide: ${p.primary_colour} primary and ${p.accent_colour} accent colours, ${p.heading_font} headings, ${p.body_font} body text, and footer “${p.footer_text}”. Keep title, section, content, activity, worked-example and closing layouts consistent.`
+      p.enforce_master_template
+        ? `Enforce the master template on every slide: ${p.primary_colour} primary and ${p.accent_colour} accent colours, ${p.heading_font} headings, ${p.body_font} body text, and footer “${p.footer_text}”. Keep title, section, content, activity, worked-example and closing layouts consistent.`
         : '',
       p.include_speaker_notes ? 'Add delivery-ready speaker notes to every teaching slide.' : '',
       p.include_worked_examples
@@ -874,7 +874,7 @@ export function SemesterOperations({
 
       {edit && (
         <details className="rounded-lg border p-3">
-          <summary>PowerPoint quality and DMI presentation standard</summary>
+          <summary>PowerPoint quality and presentation standard</summary>
           <div className="mt-3 grid gap-2 md:grid-cols-3">
             <label>
               Slides
@@ -961,7 +961,7 @@ export function SemesterOperations({
                   })
                 }
               >
-                <option value="dmi-navy">DMI navy</option>
+                <option value="institution-navy">Institution navy</option>
                 <option value="omitech-light">Omitech light</option>
                 <option value="plain">Plain academic</option>
               </select>
@@ -1029,7 +1029,7 @@ export function SemesterOperations({
                 'include_worked_examples',
                 'include_software_demo',
                 'lecturer_answers_only',
-                'enforce_dmi_master',
+                'enforce_master_template',
               ] as const
             ).map((key) => (
               <label className="text-xs" key={key}>
@@ -1056,7 +1056,7 @@ export function SemesterOperations({
             className="mt-3"
             variant="outline"
             onClick={() =>
-              void downloadDmiPresentationTemplate({
+              void downloadMasterPresentationTemplate({
                 courseCode: course.code || '',
                 courseName: course.subject || course.name,
                 semester: workspace.semester || course.term || '',
@@ -1070,7 +1070,7 @@ export function SemesterOperations({
               }).catch((cause: Error) => setError(cause.message))
             }
           >
-            Download editable DMI master PPTX
+            Download editable master PPTX
           </Button>
           <div className="mt-3 grid gap-2 md:grid-cols-3">
             {(['lecturer_edition', 'student_edition', 'accessible_edition'] as const).map((key) => (
