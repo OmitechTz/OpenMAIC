@@ -116,7 +116,7 @@ export interface SemesterWorkspace {
     slide_count: number;
     duration_minutes: number;
     aspect_ratio: 'wide' | 'standard';
-    theme: 'dmi-navy' | 'omitech-light' | 'plain';
+    theme: 'institution-navy' | 'omitech-light' | 'plain';
     lecturer_name: string;
     logo_url: string;
     include_speaker_notes: boolean;
@@ -124,7 +124,7 @@ export interface SemesterWorkspace {
     include_worked_examples: boolean;
     include_software_demo: boolean;
     lecturer_answers_only: boolean;
-    enforce_dmi_master: boolean;
+    enforce_master_template: boolean;
     primary_colour: string;
     accent_colour: string;
     heading_font: string;
