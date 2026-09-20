@@ -12,16 +12,11 @@ import { useSettingsStore } from '@/lib/store/settings';
 import { isLLMProviderConfigured } from '@/lib/store/settings-validation';
 import { getCurrentModelConfig } from '@/lib/utils/model-config';
 import { briefSchema, OUTPUT_LABELS, parseEducationContent } from '@/lib/education/artifacts';
-import {
-  EDUCATION_WORKFLOWS,
-  buildEducationWorkflowPrompt,
-  type EducationWorkflowId,
-} from '@/lib/education/workflows';
-import { STUDENT_WORKFLOWS, TEACHER_OUTPUTS } from '@/lib/education/student-workflows';
+import { buildEducationWorkflowPrompt } from '@/lib/education/workflows';
+import { STUDENT_WORKFLOWS } from '@/lib/education/student-workflows';
 import { importSourceText } from '@/lib/education/source-import';
 import type { SelectedCourseMaterial } from '@/lib/types/generation';
 import { ResourceView } from './resource-view';
-import { SubjectTemplates } from './subject-templates';
 import { toast } from 'sonner';
 
 export function EducationWorkbench({
@@ -67,17 +62,7 @@ export function EducationWorkbench({
     },
     [],
   );
-  const presets =
-    mode === 'student'
-      ? STUDENT_WORKFLOWS
-      : Object.entries(EDUCATION_WORKFLOWS).map(([id, item]) => ({
-          id,
-          title: item.title,
-          description: item.description,
-          workflowId: id as EducationWorkflowId,
-          output: TEACHER_OUTPUTS[id as EducationWorkflowId],
-          instruction: item.teacherInstruction,
-        }));
+  const presets = mode === 'student' ? STUDENT_WORKFLOWS : [];
   const selected = artifacts.find((a) => a.id === selectedId);
   const relevant = artifacts.filter((a) => !course || a.courseId === course.id);
   const readFile = async (file: File) => {
@@ -187,33 +172,34 @@ export function EducationWorkbench({
   };
   return (
     <div className="space-y-5">
-      {mode === 'teacher' && <SubjectTemplates />}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {presets.map((preset) => (
-          <button
-            type="button"
-            key={preset.id}
-            disabled={busy}
-            className="rounded-xl border p-4 text-left hover:border-primary focus-visible:outline-primary"
-            onClick={() => {
-              setComposer({
-                mode,
-                workflow: preset.workflowId,
-                instruction: preset.instruction,
-                target: preset.output,
-              });
-              setDraft({
-                mode,
-                ...(preset.output !== 'classroom' ? { output: preset.output } : {}),
-                ...(course ? { level: course.level } : {}),
-              });
-            }}
-          >
-            <p className="text-sm font-semibold">{preset.title}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{preset.description}</p>
-          </button>
-        ))}
-      </div>
+      {presets.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {presets.map((preset) => (
+            <button
+              type="button"
+              key={preset.id}
+              disabled={busy}
+              className="rounded-xl border p-4 text-left hover:border-primary focus-visible:outline-primary"
+              onClick={() => {
+                setComposer({
+                  mode,
+                  workflow: preset.workflowId,
+                  instruction: preset.instruction,
+                  target: preset.output,
+                });
+                setDraft({
+                  mode,
+                  ...(preset.output !== 'classroom' ? { output: preset.output } : {}),
+                  ...(course ? { level: course.level } : {}),
+                });
+              }}
+            >
+              <p className="text-sm font-semibold">{preset.title}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{preset.description}</p>
+            </button>
+          ))}
+        </div>
+      )}
       <form
         className="space-y-3 rounded-2xl border bg-muted/20 p-4"
         onSubmit={(e) => {
@@ -225,8 +211,8 @@ export function EducationWorkbench({
         <fieldset disabled={busy} className="space-y-3">
           <legend className="font-semibold">Customize your learning output</legend>
           <p className="text-xs">
-            This prompt is shared with the main composer. Choose a resource format here or create an
-            interactive classroom above.
+            This prompt is shared with the main composer. Choose a resource format, or pick the
+            interactive classroom output to continue in the lesson builder.
           </p>
           <div className="flex flex-wrap gap-3">
             <label>
