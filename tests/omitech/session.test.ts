@@ -79,6 +79,34 @@ describe('Omitech Learning Studio session', () => {
     expect(omitechPaidModelDenied(paidHeaders, 'openrouter', 'openai/gpt-5')).toBe(false);
   });
 
+  it('allows paid models by default — no session, or a session without the claim', () => {
+    // Standalone use (no Omitech session cookie) is never denied for being paid.
+    const anonymous = new Headers();
+    expect(omitechPaidModelDenied(anonymous, 'openrouter', 'openai/gpt-5')).toBe(false);
+    expect(omitechPaidModelDenied(anonymous, 'anthropic', 'claude-sonnet-4-6')).toBe(false);
+
+    // An absent claim is not a deliberate admin disable; only explicit false is.
+    const identity = verifyOmitechLaunchToken(launchToken())!;
+    expect(identity.paidModelsAllowed).toBe(true);
+    const { token } = createOmitechSessionToken(identity);
+    const headers = new Headers({ cookie: `omitech_learning_session=${token}` });
+    expect(omitechPaidModelDenied(headers, 'openrouter', 'openai/gpt-5')).toBe(false);
+  });
+
+  it('honors the OMITECH_ALLOW_PAID_MODELS operator override (default allow)', () => {
+    vi.stubEnv('OMITECH_ALLOW_PAID_MODELS', 'false');
+    const anonymous = new Headers();
+    expect(omitechPaidModelDenied(anonymous, 'openrouter', 'openai/gpt-5')).toBe(true);
+    // Free models stay allowed even under the operator kill switch.
+    expect(omitechPaidModelDenied(anonymous, 'openrouter', 'meta-llama/llama-3.3:free')).toBe(
+      false,
+    );
+    expect(omitechPaidModelDenied(anonymous, 'ollama', 'llama3.2')).toBe(false);
+
+    vi.stubEnv('OMITECH_ALLOW_PAID_MODELS', 'true');
+    expect(omitechPaidModelDenied(anonymous, 'openrouter', 'openai/gpt-5')).toBe(false);
+  });
+
   it('rejects expired, wrong-audience, and tampered launch tokens', () => {
     expect(verifyOmitechLaunchToken(launchToken({ exp: 1 }))).toBeUndefined();
     expect(verifyOmitechLaunchToken(launchToken({ aud: 'another-product' }))).toBeUndefined();

@@ -25,6 +25,7 @@ import { apiError } from '@/lib/server/api-response';
 import type { ThinkingConfig } from '@/lib/types/provider';
 import type { StatelessChatRequest } from '@/lib/types/chat';
 import { OmitechPaidModelPolicyError } from '@/lib/omitech/session';
+import { describeLlmError } from '@/lib/server/llm-error-response';
 import { resolveClassroomWebSearchConfig } from '@/lib/server/web-search-config';
 import { authenticatePersistenceHeaders } from '@/lib/persistence/server-auth';
 import { getServerPersistenceProvider } from '@/lib/persistence/server-provider';
@@ -273,9 +274,13 @@ export async function POST(req: NextRequest) {
 
         log.error('Pi chat stream error:', error);
         try {
+          const upstream = describeLlmError(error);
           await send({
             type: 'error',
-            data: { message: error instanceof Error ? error.message : String(error) },
+            data: {
+              message:
+                upstream?.message ?? (error instanceof Error ? error.message : String(error)),
+            },
           });
           await writer.close();
         } catch {
@@ -300,6 +305,14 @@ export async function POST(req: NextRequest) {
       `Pi chat request failed [model=${chatModel ?? 'unknown'}, messages=${chatMessageCount ?? 0}]:`,
       error,
     );
+    const upstream = describeLlmError(error);
+    if (upstream) {
+      return apiError(
+        upstream.status === 429 ? 'RATE_LIMITED' : 'UPSTREAM_ERROR',
+        upstream.status,
+        upstream.message,
+      );
+    }
     return apiError(
       'INTERNAL_ERROR',
       500,

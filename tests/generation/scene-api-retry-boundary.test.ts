@@ -261,7 +261,8 @@ describe('scene API retry boundary', () => {
     expect(body).toMatchObject({
       success: false,
       errorCode: 'UPSTREAM_ERROR',
-      error: 'Upstream authentication or authorization failed.',
+      error:
+        'The provider rejected the API key. Check the key configured for the selected provider.',
     });
   });
 
@@ -326,7 +327,8 @@ describe('scene API retry boundary', () => {
     expect(body).toMatchObject({
       success: false,
       errorCode: 'UPSTREAM_ERROR',
-      error: 'Upstream authentication or authorization failed.',
+      error:
+        'The provider rejected the API key. Check the key configured for the selected provider.',
     });
   });
 

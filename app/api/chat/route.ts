@@ -21,6 +21,7 @@ import { createLogger } from '@/lib/logger';
 import { resolveModel } from '@/lib/server/resolve-model';
 import type { ThinkingConfig } from '@/lib/types/provider';
 import { OmitechPaidModelPolicyError } from '@/lib/omitech/session';
+import { describeLlmError } from '@/lib/server/llm-error-response';
 const log = createLogger('Chat API');
 
 // Allow streaming responses up to 60 seconds
@@ -171,12 +172,16 @@ export async function POST(req: NextRequest) {
           error,
         );
 
-        // Try to send error event
+        // Try to send error event — surface accurate upstream failures (401 key
+        // rejected, 402 credit, 404 model, 408/504 timeout, 429 rate limit,
+        // context length) instead of the raw SDK message.
         try {
+          const upstream = describeLlmError(error);
           const errorEvent: StatelessEvent = {
             type: 'error',
             data: {
-              message: error instanceof Error ? error.message : String(error),
+              message:
+                upstream?.message ?? (error instanceof Error ? error.message : String(error)),
             },
           };
           await writer.write(encoder.encode(`data: ${JSON.stringify(errorEvent)}\n\n`));
@@ -202,6 +207,14 @@ export async function POST(req: NextRequest) {
       `Chat request failed [model=${chatModel ?? 'unknown'}, messages=${chatMessageCount ?? 0}]:`,
       error,
     );
+    const upstream = describeLlmError(error);
+    if (upstream) {
+      return apiError(
+        upstream.status === 429 ? 'RATE_LIMITED' : 'UPSTREAM_ERROR',
+        upstream.status,
+        upstream.message,
+      );
+    }
     return apiError(
       'INTERNAL_ERROR',
       500,

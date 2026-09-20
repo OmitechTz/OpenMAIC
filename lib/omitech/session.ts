@@ -119,7 +119,10 @@ function identityFromClaims(claims: TokenClaims): OmitechIdentity {
     name: 'Learner',
     role: 'learner',
     expiresAt: claims.exp,
-    paidModelsAllowed: claims.paid_models_allowed === true,
+    // Only an explicit `false` is a deliberate admin disable. An absent claim
+    // (older backend, standalone-minted token) must not silently block paid
+    // models — paid use is allowed by default.
+    paidModelsAllowed: claims.paid_models_allowed !== false,
   };
 }
 
@@ -183,11 +186,34 @@ export function isFreeOmitechModel(providerId: string, modelId: string): boolean
   );
 }
 
+/**
+ * Operator-level kill switch for paid models (`OMITECH_ALLOW_PAID_MODELS`).
+ * Paid models are allowed by default; only an explicit false-y value
+ * (`0`/`false`/`no`/`off`) disables them deployment-wide. This mirrors the
+ * admin `paid_models_allowed` claim but lives purely with the sidecar operator,
+ * so a self-hosted/standalone deployment is never blocked out of the box.
+ */
+export function omitechOperatorAllowsPaidModels(): boolean {
+  const raw = process.env.OMITECH_ALLOW_PAID_MODELS;
+  if (raw === undefined || raw.trim() === '') return true;
+  return !/^(0|false|no|off)$/i.test(raw.trim());
+}
+
+/**
+ * Whether a paid model must be rejected for this request. Free models
+ * (Ollama, OpenRouter `:free`) are never denied. Paid models are denied only
+ * when the operator explicitly disabled them via `OMITECH_ALLOW_PAID_MODELS`
+ * or when a signed Omitech session carries `paid_models_allowed === false`
+ * (an administrator's deliberate cost policy). Requests without an Omitech
+ * session (standalone use) are never denied for being paid.
+ */
 export function omitechPaidModelDenied(
   headers: Pick<Headers, 'get'>,
   providerId: string,
   modelId: string,
 ): boolean {
+  if (isFreeOmitechModel(providerId, modelId)) return false;
+  if (!omitechOperatorAllowsPaidModels()) return true;
   const identity = readOmitechIdentity(headers);
-  return Boolean(identity && !identity.paidModelsAllowed && !isFreeOmitechModel(providerId, modelId));
+  return Boolean(identity && identity.paidModelsAllowed === false);
 }
