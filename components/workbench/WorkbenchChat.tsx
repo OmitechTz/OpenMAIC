@@ -104,6 +104,7 @@ import { shouldShowWorkbenchEmptyState, WorkbenchChatEmptyState } from './chat/e
 import { invalidateAgentSkills } from '@/lib/workbench/agent-skills';
 import { settleSentElementRefs } from '@/lib/workbench/element-ref-send-result';
 import { settleSentCourseRefs } from '@/lib/workbench/course-ref-send-result';
+import { subscribeExternalPrompt } from '@/lib/workbench/external-prompt';
 
 const NO_ELEMENT_REFS: ElementRef[] = [];
 const NO_COURSE_REFS: CourseRef[] = [];
@@ -448,6 +449,28 @@ export function WorkbenchChat({
     materials.failed.length > 0 ||
     elementRefs.length > 0 ||
     courseRefs.length > 0;
+
+  /**
+   * A prompt staged by the Omitech Agent bridge (the versioned Learning
+   * Studio protocol's `submit-prompt` / `draft-sync`) lands here as a DRAFT:
+   * it fills the box and focuses it for review, and only the user's own send
+   * puts it in a run. Attachments stay metadata on the host side — nothing is
+   * fabricated into the composer's material row. Open menus are spent, the
+   * same rule a send applies, so a staged prompt never arrives under a
+   * half-open `/` or `@` popover.
+   */
+  const canSendRef = useRef(canSend);
+  canSendRef.current = canSend;
+  useEffect(() => {
+    return subscribeExternalPrompt((staging) => {
+      if (!canSendRef.current) return;
+      replaceDraft(staging.text);
+      setSlashDismissed(null);
+      setMentionDismissed(null);
+      setMentionOpen(false);
+      composerRef.current?.focus();
+    });
+  }, [replaceDraft]);
 
   /**
    * A skill handle was written into the draft (picked from the `/` menu, opened
@@ -864,6 +887,10 @@ export function WorkbenchChat({
             ) : (
               <div
                 className={styles.composer.inputBox}
+                // The shared Master Prompt busy language: while a send (or a
+                // stop) is in flight the box wears the same accent ring the
+                // Omitech dashboard composer shows — see `chat-styles.ts`.
+                data-busy={busy || pendingStop ? 'true' : undefined}
                 onDragOver={(event) => {
                   if (!materials.enabled || !composerTransferHasImages(event.dataTransfer)) return;
                   event.preventDefault();
