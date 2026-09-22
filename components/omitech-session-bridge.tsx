@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useUserProfileStore } from '@/lib/store/user-profile';
 import { activateLearningResources } from '@/lib/store/learning-resources';
 import { OmitechVoiceInput } from '@/components/omitech-voice-input';
+import { OmitechMasterBridge } from '@/components/omitech-master-bridge';
 
 interface SessionUser {
   id: string;
@@ -120,7 +121,14 @@ export function OmitechSessionBridge({ children }: { children: ReactNode }) {
     };
   }, [setNickname]);
 
-  if (state === 'ready') return <>{children}<OmitechVoiceInput origins={allowedParentOrigins()} /></>;
+  if (state === 'ready')
+    return (
+      <>
+        {children}
+        <OmitechVoiceInput origins={allowedParentOrigins()} />
+        <OmitechMasterBridge origins={allowedParentOrigins()} />
+      </>
+    );
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6 text-foreground">

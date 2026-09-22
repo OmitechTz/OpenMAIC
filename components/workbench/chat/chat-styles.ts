@@ -299,8 +299,21 @@ export const wbStyles = {
       'size-[5px] rounded-full bg-[var(--wb-text-faint)] animate-[wb-wait-pulse_1.2s_ease-in-out_0.3s_infinite] motion-reduce:animate-none motion-reduce:opacity-60',
   },
   composer: {
+    /**
+     * The shared Master Prompt frame, in `.wbchat` tokens: a rounded-2xl
+     * bordered box whose focus-within ring, quiet border and soft elevation
+     * match the Omitech dashboard composer (`dashboardComposer.css` /
+     * `ServicePromptComposer.tsx` in the Omitech Agent frontend) one-for-one.
+     *
+     * `data-busy=true` is the shared BUSY language: the dashboard shows a
+     * violet ring while a submission is in flight; here the same signal is
+     * spoken with the rail's own accent ring (`--wb-focus-ring`), so a
+     * send/stop in progress reads identically on both surfaces without either
+     * product importing the other's palette. `motion-reduce` drops the frame
+     * transition exactly as the dashboard composer does.
+     */
     inputBox:
-      'relative rounded-2xl border border-[var(--wb-line)] bg-[var(--wb-surface)] shadow-[0_10px_32px_-14px_rgba(15,23,42,0.22)] transition duration-150 focus-within:border-[var(--wb-accent)] focus-within:shadow-[var(--wb-focus-ring),0_10px_32px_-14px_rgba(15,23,42,0.22)] dark:shadow-[0_12px_36px_-12px_rgba(0,0,0,0.55)]',
+      'relative rounded-2xl border border-[var(--wb-line)] bg-[var(--wb-surface)] shadow-[0_10px_32px_-14px_rgba(15,23,42,0.22)] transition duration-150 focus-within:border-[var(--wb-accent)] focus-within:shadow-[var(--wb-focus-ring),0_10px_32px_-14px_rgba(15,23,42,0.22)] data-[busy=true]:border-[var(--wb-accent)] data-[busy=true]:shadow-[var(--wb-focus-ring),0_10px_32px_-14px_rgba(15,23,42,0.22)] motion-reduce:transition-none dark:shadow-[0_12px_36px_-12px_rgba(0,0,0,0.55)]',
     /**
      * Everything attached to the next message, INSIDE the box it is attached to.
      *
