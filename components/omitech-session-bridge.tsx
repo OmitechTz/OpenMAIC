@@ -41,6 +41,7 @@ export function OmitechSessionBridge({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    let latestConnection = 0;
     let refreshTimer: ReturnType<typeof setTimeout> | undefined;
     const requestRefresh = () => {
       for (const origin of allowedParentOrigins()) {
@@ -48,42 +49,51 @@ export function OmitechSessionBridge({ children }: { children: ReactNode }) {
       }
     };
     const connect = async (launchToken?: string) => {
-      if (!cancelled) {
+      const connection = ++latestConnection;
+      // A renewal must leave the active workspace mounted while its new
+      // short-lived session is verified. The initial connection still shows
+      // the connecting screen.
+      if (!cancelled && !launchToken) {
         setState('checking');
         setMessage('Connecting securely to Omitech Agent…');
       }
-      const response = await fetch('/api/omitech/session', {
-        method: launchToken ? 'POST' : 'GET',
-        credentials: 'same-origin',
-        headers: launchToken ? { 'content-type': 'application/json' } : undefined,
-        body: launchToken ? JSON.stringify({ launch_token: launchToken }) : undefined,
-      });
-      const payload = (await response.json().catch(() => ({}))) as Partial<SessionResponse>;
-      if (cancelled) return;
-      if (payload.enabled === false) {
-        await activateLearningResources('standalone');
-        if (cancelled) return;
-        setState('ready');
-        return;
-      }
-      if (response.ok && payload.authenticated && payload.user) {
-        await activateLearningResources(payload.user.learner_key);
-        if (cancelled) return;
-        setNickname(payload.user.name);
-        setState('ready');
-        if (launchToken) {
-          if (refreshTimer) clearTimeout(refreshTimer);
-          refreshTimer = undefined;
+      try {
+        const response = await fetch('/api/omitech/session', {
+          method: launchToken ? 'POST' : 'GET',
+          credentials: 'same-origin',
+          headers: launchToken ? { 'content-type': 'application/json' } : undefined,
+          body: launchToken ? JSON.stringify({ launch_token: launchToken }) : undefined,
+        });
+        const payload = (await response.json().catch(() => ({}))) as Partial<SessionResponse>;
+        if (cancelled || connection !== latestConnection) return;
+        if (payload.enabled === false) {
+          await activateLearningResources('standalone');
+          if (cancelled || connection !== latestConnection) return;
+          setState('ready');
+          return;
         }
-        if (launchToken && payload.expires_in) {
-          // Renew before the HTTP-only session expires. The parent issues a new
-          // short-lived launch token, so no reusable Omitech credential is kept here.
-          const refreshAfterMs = Math.max(60, payload.expires_in - 120) * 1000;
-          refreshTimer = setTimeout(requestRefresh, refreshAfterMs);
+        if (response.ok && payload.authenticated && payload.user) {
+          await activateLearningResources(payload.user.learner_key);
+          if (cancelled || connection !== latestConnection) return;
+          setNickname(payload.user.name);
+          setState('ready');
+          if (launchToken) {
+            if (refreshTimer) clearTimeout(refreshTimer);
+            refreshTimer = undefined;
+          }
+          if (launchToken && payload.expires_in) {
+            // Renew before the HTTP-only session expires. The parent issues a new
+            // short-lived launch token, so no reusable Omitech credential is kept here.
+            const refreshAfterMs = Math.max(60, payload.expires_in - 120) * 1000;
+            refreshTimer = setTimeout(requestRefresh, refreshAfterMs);
+          }
+          return;
         }
-        return;
+        setMessage(payload.error || 'Open Learning Studio from your Omitech Agent workspace.');
+      } catch {
+        if (cancelled || connection !== latestConnection) return;
+        setMessage('Learning Studio could not verify your Omitech Agent session.');
       }
-      setMessage(payload.error || 'Open Learning Studio from your Omitech Agent workspace.');
       setState('blocked');
     };
     const handleMessage = (event: MessageEvent) => {
@@ -97,23 +107,13 @@ export function OmitechSessionBridge({ children }: { children: ReactNode }) {
       ) {
         return;
       }
-      void connect(event.data.token).catch(() => {
-        if (!cancelled) {
-          setMessage('Learning Studio could not verify your Omitech Agent session.');
-          setState('blocked');
-        }
-      });
+      void connect(event.data.token);
     };
     window.addEventListener('message', handleMessage);
     for (const origin of allowedParentOrigins()) {
       window.parent.postMessage({ type: 'omitech:learning-studio:ready' }, origin);
     }
-    void connect().catch(() => {
-      if (!cancelled) {
-        setMessage('Learning Studio could not verify your Omitech Agent session.');
-        setState('blocked');
-      }
-    });
+    void connect();
     return () => {
       cancelled = true;
       if (refreshTimer) clearTimeout(refreshTimer);
